@@ -86,6 +86,28 @@ resource "google_storage_bucket" "models" {
   }
 }
 
+resource "google_storage_bucket" "cloudbuild" {
+  name     = "${var.project_id}_cloudbuild"
+  location = var.region
+
+  uniform_bucket_level_access = true
+  force_destroy               = var.environment == "dev"
+
+  lifecycle_rule {
+    condition {
+      age = 30
+    }
+    action {
+      type = "Delete"
+    }
+  }
+
+  labels = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
 # -------------------------------------------------------------------
 # BigQuery Dataset
 # -------------------------------------------------------------------

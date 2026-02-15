@@ -96,7 +96,7 @@ uv run mypy src/                        # 型チェック
 ### CI/CD
 
 - **PR時**: GitHub Actionsでテスト（test.yaml）とリント（lint.yaml）を自動実行
-- **main push時**: テスト後、GCP Cloud Run Jobsへ自動デプロイ（deploy.yaml）
+- **main push時**: テスト・リント後、GCP Cloud Run Jobsへ自動デプロイ（deploy.yaml）
 - 認証: Workload Identity Federation（`watariGIT/horse-racing` リポジトリに制限）
 
 ### Terraform
@@ -141,5 +141,5 @@ terraform apply -var="project_id=horse-racing-ml-dev"
 ## ブランチ戦略
 
 - `main`: プロダクション。直接プッシュ禁止。
-- `feature/*`: 機能開発ブランチ。PRでmainにマージ。
+- 開発ブランチ: 機能名・変更名でブランチを作成（例: `fix-deploy-permissions`, `add-lint-to-deploy`）。PRでmainにマージ。
 - Squash mergeを使用。
