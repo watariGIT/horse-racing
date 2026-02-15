@@ -1,0 +1,11 @@
+# Production environment overrides
+
+gcp:
+  project_id: ${GCP_PROJECT_ID}
+
+bigquery:
+  dataset: horse_racing
+
+logging:
+  level: INFO
+  format: json

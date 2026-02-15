@@ -1,0 +1,263 @@
+terraform {
+  required_version = ">= 1.5.0"
+
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.0"
+    }
+  }
+
+  # Remote state in GCS (uncomment after initial setup)
+  # backend "gcs" {
+  #   bucket = "YOUR_PROJECT_ID-terraform-state"
+  #   prefix = "horse-racing"
+  # }
+}
+
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
+# -------------------------------------------------------------------
+# GCS Buckets
+# -------------------------------------------------------------------
+
+resource "google_storage_bucket" "raw_data" {
+  name     = "${var.project_id}-raw-data"
+  location = var.region
+
+  uniform_bucket_level_access = true
+  force_destroy               = var.environment == "dev"
+
+  lifecycle_rule {
+    condition {
+      age = var.gcs_lifecycle_days
+    }
+    action {
+      type          = "SetStorageClass"
+      storage_class = "NEARLINE"
+    }
+  }
+
+  labels = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
+resource "google_storage_bucket" "processed" {
+  name     = "${var.project_id}-processed"
+  location = var.region
+
+  uniform_bucket_level_access = true
+  force_destroy               = var.environment == "dev"
+
+  lifecycle_rule {
+    condition {
+      age = var.gcs_lifecycle_days
+    }
+    action {
+      type          = "SetStorageClass"
+      storage_class = "NEARLINE"
+    }
+  }
+
+  labels = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
+resource "google_storage_bucket" "models" {
+  name     = "${var.project_id}-models"
+  location = var.region
+
+  uniform_bucket_level_access = true
+  force_destroy               = var.environment == "dev"
+
+  versioning {
+    enabled = true
+  }
+
+  labels = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
+# -------------------------------------------------------------------
+# BigQuery Dataset
+# -------------------------------------------------------------------
+
+resource "google_bigquery_dataset" "horse_racing" {
+  dataset_id = "horse_racing${var.environment == "dev" ? "_dev" : ""}"
+  location   = var.bigquery_location
+
+  delete_contents_on_destroy = var.environment == "dev"
+
+  labels = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
+# BigQuery Tables
+
+resource "google_bigquery_table" "races_raw" {
+  dataset_id          = google_bigquery_dataset.horse_racing.dataset_id
+  table_id            = "races_raw"
+  deletion_protection = var.environment == "prod"
+
+  time_partitioning {
+    type  = "DAY"
+    field = "race_date"
+  }
+
+  labels = {
+    environment = var.environment
+  }
+
+  schema = jsonencode([
+    { name = "race_id", type = "STRING", mode = "REQUIRED" },
+    { name = "race_date", type = "DATE", mode = "REQUIRED" },
+    { name = "race_name", type = "STRING", mode = "NULLABLE" },
+    { name = "venue", type = "STRING", mode = "NULLABLE" },
+    { name = "race_number", type = "INTEGER", mode = "NULLABLE" },
+    { name = "distance", type = "INTEGER", mode = "NULLABLE" },
+    { name = "surface", type = "STRING", mode = "NULLABLE" },
+    { name = "weather", type = "STRING", mode = "NULLABLE" },
+    { name = "track_condition", type = "STRING", mode = "NULLABLE" },
+    { name = "raw_data", type = "JSON", mode = "NULLABLE" },
+    { name = "collected_at", type = "TIMESTAMP", mode = "REQUIRED" },
+  ])
+}
+
+resource "google_bigquery_table" "features" {
+  dataset_id          = google_bigquery_dataset.horse_racing.dataset_id
+  table_id            = "features"
+  deletion_protection = var.environment == "prod"
+
+  time_partitioning {
+    type  = "DAY"
+    field = "race_date"
+  }
+
+  clustering = ["feature_version"]
+
+  labels = {
+    environment = var.environment
+  }
+
+  schema = jsonencode([
+    { name = "race_id", type = "STRING", mode = "REQUIRED" },
+    { name = "horse_id", type = "STRING", mode = "REQUIRED" },
+    { name = "race_date", type = "DATE", mode = "REQUIRED" },
+    { name = "feature_version", type = "STRING", mode = "REQUIRED" },
+    { name = "features", type = "JSON", mode = "REQUIRED" },
+    { name = "created_at", type = "TIMESTAMP", mode = "REQUIRED" },
+  ])
+}
+
+resource "google_bigquery_table" "predictions" {
+  dataset_id          = google_bigquery_dataset.horse_racing.dataset_id
+  table_id            = "predictions"
+  deletion_protection = var.environment == "prod"
+
+  time_partitioning {
+    type  = "DAY"
+    field = "race_date"
+  }
+
+  labels = {
+    environment = var.environment
+  }
+
+  schema = jsonencode([
+    { name = "race_id", type = "STRING", mode = "REQUIRED" },
+    { name = "horse_id", type = "STRING", mode = "REQUIRED" },
+    { name = "race_date", type = "DATE", mode = "REQUIRED" },
+    { name = "model_version", type = "STRING", mode = "REQUIRED" },
+    { name = "prediction", type = "FLOAT64", mode = "REQUIRED" },
+    { name = "predicted_at", type = "TIMESTAMP", mode = "REQUIRED" },
+  ])
+}
+
+# -------------------------------------------------------------------
+# Secret Manager
+# -------------------------------------------------------------------
+
+resource "google_secret_manager_secret" "jra_api_key" {
+  secret_id = "jra-api-key"
+
+  replication {
+    auto {}
+  }
+
+  labels = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
+# -------------------------------------------------------------------
+# Service Account for Cloud Run / Cloud Functions
+# -------------------------------------------------------------------
+
+resource "google_service_account" "ml_pipeline" {
+  account_id   = "ml-pipeline-sa"
+  display_name = "ML Pipeline Service Account"
+}
+
+# GCS access
+resource "google_project_iam_member" "ml_pipeline_storage" {
+  project = var.project_id
+  role    = "roles/storage.objectAdmin"
+  member  = "serviceAccount:${google_service_account.ml_pipeline.email}"
+}
+
+# BigQuery access
+resource "google_project_iam_member" "ml_pipeline_bigquery" {
+  project = var.project_id
+  role    = "roles/bigquery.dataEditor"
+  member  = "serviceAccount:${google_service_account.ml_pipeline.email}"
+}
+
+resource "google_project_iam_member" "ml_pipeline_bigquery_job" {
+  project = var.project_id
+  role    = "roles/bigquery.jobUser"
+  member  = "serviceAccount:${google_service_account.ml_pipeline.email}"
+}
+
+# Secret Manager access
+resource "google_secret_manager_secret_iam_member" "ml_pipeline_jra_key" {
+  secret_id = google_secret_manager_secret.jra_api_key.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.ml_pipeline.email}"
+}
+
+# -------------------------------------------------------------------
+# Workload Identity Federation (for GitHub Actions)
+# -------------------------------------------------------------------
+
+resource "google_iam_workload_identity_pool" "github" {
+  workload_identity_pool_id = "github-pool"
+  display_name              = "GitHub Actions Pool"
+}
+
+resource "google_iam_workload_identity_pool_provider" "github" {
+  workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
+  workload_identity_pool_provider_id = "github-provider"
+  display_name                       = "GitHub Actions Provider"
+
+  attribute_mapping = {
+    "google.subject"       = "assertion.sub"
+    "attribute.actor"      = "assertion.actor"
+    "attribute.repository" = "assertion.repository"
+  }
+
+  oidc {
+    issuer_uri = "https://token.actions.githubusercontent.com"
+  }
+}

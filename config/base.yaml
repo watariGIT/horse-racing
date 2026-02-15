@@ -1,0 +1,25 @@
+# Base configuration shared across all environments
+
+gcp:
+  region: us-central1
+
+bigquery:
+  dataset: horse_racing
+  location: US
+
+gcs:
+  lifecycle_days: 90  # Days before transitioning to Nearline
+
+cloud_run:
+  memory: 512Mi
+  cpu: "1"
+  concurrency: 1
+  timeout: 300
+
+model:
+  default_type: lgbm_classifier
+  feature_version: v1
+
+logging:
+  level: INFO
+  format: json

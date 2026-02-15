@@ -1,0 +1,11 @@
+# Development environment overrides
+
+gcp:
+  project_id: ${GCP_PROJECT_ID}
+
+bigquery:
+  dataset: horse_racing_dev
+
+logging:
+  level: DEBUG
+  format: text
