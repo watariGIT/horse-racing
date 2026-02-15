@@ -213,8 +213,10 @@ class PerformanceMonitor:
                             current_value=float(cur_mean),
                             threshold=float(ref_mean),
                             message=(
-                                f"Column '{col}' mean shifted by {mean_change:.1%} "
-                                f"(ref={float(ref_mean):.4f}, cur={float(cur_mean):.4f})"
+                                f"Column '{col}' mean shifted by "
+                                f"{mean_change:.1%} "
+                                f"(ref={float(ref_mean):.4f}, "
+                                f"cur={float(cur_mean):.4f})"
                             ),
                         )
                     )
