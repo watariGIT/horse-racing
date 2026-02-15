@@ -8,7 +8,7 @@ GCP上に構築する低コスト競馬予測MLシステム。JRAのレースデ
 
 ```
 データ収集 -> 特徴量生成 -> モデル学習 -> 予測 -> 評価
-(Cloud Functions)  (Cloud Run)   (Cloud Run)  (Cloud Run)  (Cloud Run)
+(Cloud Functions)  (Cloud Run Jobs)  (Cloud Run Jobs)  (Cloud Run Jobs)  (Cloud Run Jobs)
       |                |              |            |            |
       v                v              v            v            v
    GCS(raw)      BigQuery(features)  GCS(models)  BigQuery   BigQuery
@@ -17,9 +17,10 @@ GCP上に構築する低コスト競馬予測MLシステム。JRAのレースデ
 ### GCPサービス構成
 - **Cloud Storage (GCS)**: 生データ・加工済みデータ・モデルの保存
 - **BigQuery**: 特徴量テーブル・予測結果・レース生データの格納
-- **Cloud Run**: バッチ処理（特徴量生成、学習、予測、評価）
+- **Cloud Run Jobs**: バッチ処理（特徴量生成、学習、予測、評価）
 - **Cloud Functions**: 軽量トリガー（データ収集スケジューラ）
 - **Secret Manager**: APIキー管理
+- **Workload Identity Federation**: GitHub Actions CI/CD認証
 
 ## 技術スタック
 
@@ -95,16 +96,18 @@ uv run mypy src/                        # 型チェック
 ### CI/CD
 
 - **PR時**: GitHub Actionsでテスト（test.yaml）とリント（lint.yaml）を自動実行
-- **main push時**: テスト後、GCP Cloud Runへ自動デプロイ（deploy.yaml）
-- 認証: Workload Identity Federation
+- **main push時**: テスト後、GCP Cloud Run Jobsへ自動デプロイ（deploy.yaml）
+- 認証: Workload Identity Federation（`watariGIT/horse-racing` リポジトリに制限）
 
 ### Terraform
+
+Terraform stateはGCS (`horse-racing-ml-dev-terraform-state`) で管理。
 
 ```bash
 cd infrastructure/terraform
 terraform init
-terraform plan -var="project_id=YOUR_PROJECT_ID"
-terraform apply -var="project_id=YOUR_PROJECT_ID"
+terraform plan -var="project_id=horse-racing-ml-dev"
+terraform apply -var="project_id=horse-racing-ml-dev"
 ```
 
 ## コーディング規約
@@ -125,14 +128,14 @@ terraform apply -var="project_id=YOUR_PROJECT_ID"
 |---|---|---|
 | Cloud Storage | ~$0.20/月 | Nearlineへのライフサイクル移行 (90日) |
 | BigQuery | ~$0.50/月 | オンデマンド課金、10GB以下 |
-| Cloud Run | Free tier | 月間200万リクエスト無料 |
+| Cloud Run Jobs | Free tier | 月間200万リクエスト無料 |
 | Cloud Functions | Free tier | 月間200万回無料 |
 | Secret Manager | Free tier | 月間10,000アクセス無料 |
 
 ### コスト削減の工夫
 - GCSライフサイクルルールで古いデータをNearlineに移行
 - BigQueryはパーティション＋クラスタリングで読み取りコスト最小化
-- Cloud Runは最大インスタンス数1、最小0（完全スケールダウン）
+- Cloud Run Jobsでバッチ実行（実行時のみ課金）
 - Terraformで `force_destroy` は dev環境のみ有効
 
 ## ブランチ戦略

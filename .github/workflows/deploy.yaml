@@ -6,7 +6,8 @@ on:
 
 env:
   GCP_REGION: us-central1
-  CLOUD_RUN_SERVICE: ml-pipeline
+  GCP_PROJECT_ID: horse-racing-ml-dev
+  CLOUD_RUN_JOB: ml-pipeline
 
 jobs:
   test:
@@ -47,14 +48,15 @@ jobs:
       - name: Configure Docker
         run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
 
-      - name: Deploy to Cloud Run
+      - name: Deploy to Cloud Run Jobs
         run: |
-          gcloud run deploy ${{ env.CLOUD_RUN_SERVICE }} \
+          gcloud run jobs deploy ${{ env.CLOUD_RUN_JOB }} \
             --source . \
             --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_ID }} \
             --memory 512Mi \
             --cpu 1 \
-            --concurrency 1 \
-            --max-instances 1 \
+            --max-retries 0 \
+            --task-timeout 3600 \
             --service-account ${{ secrets.SERVICE_ACCOUNT }} \
-            --no-allow-unauthenticated
+            --set-env-vars "ENVIRONMENT=dev,GCP_PROJECT_ID=${{ env.GCP_PROJECT_ID }}"

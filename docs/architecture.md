@@ -15,9 +15,9 @@
 |                        Google Cloud Platform                     |
 |                                                                  |
 |  +------------------+    +------------------+                    |
-|  | Secret Manager   |    | Cloud Run        |                    |
+|  | Secret Manager   |    | Cloud Run Jobs   |                    |
 |  | - jra-api-key    |    | - ml-pipeline    |                    |
-|  +--------+---------+    | (max 1 instance) |                    |
+|  +--------+---------+    | (バッチ実行)      |                    |
 |           |              +----+----+----+---+                    |
 |           |                   |    |    |                         |
 |           v                   |    |    |                         |
@@ -176,8 +176,8 @@ src/
 | **BigQuery** | | | |
 | - ストレージ | ~1GB (最初の10GB無料) | $0/月 | $0 |
 | - クエリ | ~5GB/月 (最初の1TB無料) | $0/月 | $0 |
-| **Cloud Run** | | | |
-| - リクエスト | ~1,000回/月 (200万回無料) | $0/月 | $0 |
+| **Cloud Run Jobs** | | | |
+| - 実行回数 | ~30回/月 (Free tier内) | $0/月 | $0 |
 | - CPU | ~10 CPU時間 (180,000 vCPU秒無料) | $0/月 | $0 |
 | - メモリ | 512Mi x 10時間 (360,000 GiB秒無料) | $0/月 | $0 |
 | **Cloud Functions** | | | |
@@ -191,7 +191,7 @@ src/
 - **GCS ライフサイクルルール**: 90日経過後にNearline Storage Classへ自動移行
 - **BigQuery パーティション**: `race_date` による日次パーティション。クエリが必要な日付範囲のみスキャン
 - **BigQuery クラスタリング**: `feature_version` でクラスタリング。特定バージョンのみ読み取り
-- **Cloud Run スケーリング**: `max-instances=1`, 未使用時はゼロにスケールダウン
+- **Cloud Run Jobs**: バッチ実行時のみ課金。実行していない間はコストゼロ
 - **Models バケット**: バージョニング有効で履歴管理（不要な古いバージョンは定期削除）
 
 ## 拡張パス
@@ -202,7 +202,7 @@ src/
 手動実行 -> データ収集 -> 特徴量生成 -> 学習 -> 予測 -> 評価
 ```
 
-- CLIまたはCloud Runでパイプラインを手動実行
+- CLIまたはCloud Run Jobsでパイプラインを手動実行
 - 結果をBigQueryで確認
 - モデルの改善サイクルを手動で回す
 
@@ -213,7 +213,7 @@ Cloud Scheduler -> Cloud Functions (トリガー) -> Cloud Run (パイプライ�
 ```
 
 - Cloud Scheduler で日次/週次の自動実行
-- Cloud Functions がCloud Runジョブをトリガー
+- Cloud Functions がCloud Run Jobsをトリガー
 - Pub/Sub でパイプラインステージ間を連携
 - エラー通知（Cloud Monitoring + アラート）
 

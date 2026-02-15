@@ -57,8 +57,7 @@ cp .env.example .env
 
 ```bash
 # GCP Configuration
-GOOGLE_APPLICATION_CREDENTIALS=path/to/service-account.json
-GCP_PROJECT_ID=your-gcp-project-id
+GCP_PROJECT_ID=horse-racing-ml-dev
 GCP_REGION=us-central1
 
 # JRA API
@@ -68,7 +67,12 @@ JRA_API_KEY=your-jra-api-key-here
 ENVIRONMENT=dev
 
 # BigQuery
-BQ_DATASET=horse_racing
+BQ_DATASET=horse_racing_dev
+
+# GCS Buckets (プロジェクトIDから自動生成されるため通常は設定不要)
+# GCS_BUCKET_RAW=horse-racing-ml-dev-raw-data
+# GCS_BUCKET_PROCESSED=horse-racing-ml-dev-processed
+# GCS_BUCKET_MODELS=horse-racing-ml-dev-models
 ```
 
 ### 必須項目
@@ -114,7 +118,7 @@ export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
 
 ### 必要な権限
 
-MLパイプラインのサービスアカウントに必要な権限:
+MLパイプラインのサービスアカウント (`ml-pipeline-sa`) に付与されている権限:
 
 | ロール | 用途 |
 |---|---|
@@ -122,6 +126,11 @@ MLパイプラインのサービスアカウントに必要な権限:
 | `roles/bigquery.dataEditor` | BigQueryテーブルの読み書き |
 | `roles/bigquery.jobUser` | BigQueryジョブの実行 |
 | `roles/secretmanager.secretAccessor` | Secret Managerからの読み取り |
+| `roles/run.admin` | Cloud Run Jobsのデプロイ・実行 |
+| `roles/iam.serviceAccountUser` | サービスアカウントのimpersonate |
+| `roles/artifactregistry.writer` | コンテナイメージのpush |
+| `roles/cloudbuild.builds.editor` | Cloud Build実行 |
+| `roles/logging.logWriter` | ログ書き込み |
 
 ## 5. Terraformによるインフラ構築
 
@@ -135,13 +144,13 @@ terraform init
 ### プランの確認
 
 ```bash
-terraform plan -var="project_id=YOUR_PROJECT_ID"
+terraform plan -var="project_id=horse-racing-ml-dev"
 ```
 
 ### リソースの作成
 
 ```bash
-terraform apply -var="project_id=YOUR_PROJECT_ID"
+terraform apply -var="project_id=horse-racing-ml-dev"
 ```
 
 ### 環境別のデプロイ
@@ -149,12 +158,12 @@ terraform apply -var="project_id=YOUR_PROJECT_ID"
 ```bash
 # 開発環境
 terraform apply \
-  -var="project_id=YOUR_PROJECT_ID" \
+  -var="project_id=horse-racing-ml-dev" \
   -var="environment=dev"
 
 # 本番環境
 terraform apply \
-  -var="project_id=YOUR_PROJECT_ID" \
+  -var="project_id=YOUR_PROD_PROJECT_ID" \
   -var="environment=prod"
 ```
 
@@ -166,13 +175,13 @@ terraform apply \
 | BigQuery データセット | horse_racing (prod) / horse_racing_dev (dev) |
 | BigQuery テーブル x3 | races_raw, features, predictions |
 | Secret Manager シークレット | jra-api-key |
-| サービスアカウント | ml-pipeline-sa |
-| Workload Identity Federation | GitHub Actions用 |
+| サービスアカウント | ml-pipeline-sa (10個のIAMロール付与) |
+| Workload Identity Federation | GitHub Actions用（`watariGIT/horse-racing` リポジトリに制限） |
 
 ### リソースの削除
 
 ```bash
-terraform destroy -var="project_id=YOUR_PROJECT_ID"
+terraform destroy -var="project_id=horse-racing-ml-dev"
 ```
 
 ## 6. テストの実行
@@ -247,11 +256,12 @@ gcloud auth application-default login
 
 ### Terraform のState管理
 
-初回は local state を使用。チーム開発に移行する場合は `main.tf` の backend "gcs" ブロックのコメントを解除:
+Terraform stateはGCSバケット (`horse-racing-ml-dev-terraform-state`) でリモート管理されている。
+`main.tf` の backend ブロックで設定済み:
 
 ```hcl
 backend "gcs" {
-  bucket = "YOUR_PROJECT_ID-terraform-state"
+  bucket = "horse-racing-ml-dev-terraform-state"
   prefix = "horse-racing"
 }
 ```

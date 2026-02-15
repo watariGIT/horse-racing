@@ -32,7 +32,7 @@ GCP-based machine learning system for horse racing prediction. Collects and anal
 | データ処理 | Polars, Pandas |
 | 機械学習 | LightGBM, scikit-learn |
 | 実験管理 | MLflow |
-| クラウド | GCP (GCS, BigQuery, Cloud Run, Cloud Functions) |
+| クラウド | GCP (GCS, BigQuery, Cloud Run Jobs, Cloud Functions) |
 | インフラ | Terraform |
 | CI/CD | GitHub Actions |
 | リンター | Ruff, Black, mypy |
@@ -78,8 +78,8 @@ gcloud auth application-default login
 ```bash
 cd infrastructure/terraform
 terraform init
-terraform plan -var="project_id=YOUR_PROJECT_ID"
-terraform apply -var="project_id=YOUR_PROJECT_ID"
+terraform plan -var="project_id=horse-racing-ml-dev"
+terraform apply -var="project_id=horse-racing-ml-dev"
 ```
 
 詳細は [セットアップガイド](docs/setup.md) を参照してください。
@@ -132,7 +132,7 @@ uv run ruff check --fix src/ tests/
 ## CI/CD
 
 - **PR**: Automated tests and linting via GitHub Actions
-- **main push**: Automated deployment to GCP Cloud Run
+- **main push**: Automated deployment to GCP Cloud Run Jobs
 
 ## Cost Estimate
 
@@ -142,7 +142,7 @@ uv run ruff check --fix src/ tests/
 |-------------------|---------------|
 | Cloud Storage     | ~$0.01/month  |
 | BigQuery          | Free tier     |
-| Cloud Run         | Free tier     |
+| Cloud Run Jobs    | Free tier     |
 | Cloud Functions   | Free tier     |
 | Secret Manager    | Free tier     |
 

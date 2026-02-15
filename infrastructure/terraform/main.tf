@@ -8,11 +8,10 @@ terraform {
     }
   }
 
-  # Remote state in GCS (uncomment after initial setup)
-  # backend "gcs" {
-  #   bucket = "YOUR_PROJECT_ID-terraform-state"
-  #   prefix = "horse-racing"
-  # }
+  backend "gcs" {
+    bucket = "horse-racing-ml-dev-terraform-state"
+    prefix = "horse-racing"
+  }
 }
 
 provider "google" {
@@ -257,7 +256,50 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     "attribute.repository" = "assertion.repository"
   }
 
+  attribute_condition = "attribute.repository == \"${var.github_repository}\""
+
   oidc {
     issuer_uri = "https://token.actions.githubusercontent.com"
   }
+}
+
+# WIF IAM binding: allow GitHub Actions to impersonate the SA
+resource "google_service_account_iam_member" "wif_sa_binding" {
+  service_account_id = google_service_account.ml_pipeline.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository/${var.github_repository}"
+}
+
+# -------------------------------------------------------------------
+# Cloud Run deploy IAM roles for the service account
+# -------------------------------------------------------------------
+
+resource "google_project_iam_member" "ml_pipeline_run_admin" {
+  project = var.project_id
+  role    = "roles/run.admin"
+  member  = "serviceAccount:${google_service_account.ml_pipeline.email}"
+}
+
+resource "google_project_iam_member" "ml_pipeline_sa_user" {
+  project = var.project_id
+  role    = "roles/iam.serviceAccountUser"
+  member  = "serviceAccount:${google_service_account.ml_pipeline.email}"
+}
+
+resource "google_project_iam_member" "ml_pipeline_ar_writer" {
+  project = var.project_id
+  role    = "roles/artifactregistry.writer"
+  member  = "serviceAccount:${google_service_account.ml_pipeline.email}"
+}
+
+resource "google_project_iam_member" "ml_pipeline_cloudbuild_editor" {
+  project = var.project_id
+  role    = "roles/cloudbuild.builds.editor"
+  member  = "serviceAccount:${google_service_account.ml_pipeline.email}"
+}
+
+resource "google_project_iam_member" "ml_pipeline_log_writer" {
+  project = var.project_id
+  role    = "roles/logging.logWriter"
+  member  = "serviceAccount:${google_service_account.ml_pipeline.email}"
 }

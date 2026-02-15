@@ -43,3 +43,9 @@ variable "cloud_run_cpu" {
   type        = string
   default     = "1"
 }
+
+variable "github_repository" {
+  description = "GitHub repository in format 'owner/repo'"
+  type        = string
+  default     = "watariGIT/horse-racing"
+}
