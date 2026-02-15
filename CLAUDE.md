@@ -19,6 +19,7 @@ GCP上に構築する低コスト競馬予測MLシステム。JRAのレースデ
 - **BigQuery**: 特徴量テーブル・予測結果・レース生データの格納
 - **Cloud Run Jobs**: バッチ処理（特徴量生成、学習、予測、評価）
 - **Cloud Functions**: 軽量トリガー（データ収集スケジューラ）
+- **Artifact Registry**: Dockerイメージの保存（直近5イメージを保持、古いものは自動削除）
 - **Secret Manager**: APIキー管理
 - **Workload Identity Federation**: GitHub Actions CI/CD認証
 
@@ -97,6 +98,7 @@ uv run mypy src/                        # 型チェック
 
 - **PR時**: GitHub Actionsでテスト（test.yaml）とリント（lint.yaml）を自動実行
 - **main push時**: テスト・リント後、GCP Cloud Run Jobsへ自動デプロイ（deploy.yaml）
+- **デプロイ方式**: CIランナー上で `docker build/push` → Artifact Registry → `--image` で Cloud Run Jobs にデプロイ
 - 認証: Workload Identity Federation（`watariGIT/horse-racing` リポジトリに制限）
 
 ### Terraform
