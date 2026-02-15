@@ -2,13 +2,13 @@
 
 ## プロジェクト概要
 
-GCP上に構築する低コスト競馬予測MLシステム。JRAのレースデータを収集・分析し、LightGBMベースの機械学習モデルで着順予測を行う。月間運用コスト$1以下を目標とする。
+GCP上に構築する低コスト競馬予測MLシステム。Kaggle データセット（[takamotoki/jra-horse-racing-dataset](https://www.kaggle.com/datasets/takamotoki/jra-horse-racing-dataset)）から1986〜2021年の過去データを一括インポートし、LightGBMベースの機械学習モデルで着順予測を行う。月間運用コスト$1以下を目標とする。
 
 ## システムアーキテクチャ概要
 
 ```
-データ収集 -> 特徴量生成 -> モデル学習 -> 予測 -> 評価
-(Cloud Functions)  (Cloud Run Jobs)  (Cloud Run Jobs)  (Cloud Run Jobs)  (Cloud Run Jobs)
+データインポート -> 特徴量生成 -> モデル学習 -> 予測 -> 評価
+(Kaggle CSV)       (Cloud Run Jobs)  (Cloud Run Jobs)  (Cloud Run Jobs)  (Cloud Run Jobs)
       |                |              |            |            |
       v                v              v            v            v
    GCS(raw)      BigQuery(features)  GCS(models)  BigQuery   BigQuery
@@ -44,7 +44,7 @@ src/
 │   ├── config.py           # Pydantic Settings + YAML設定管理
 │   ├── gcp_client.py       # GCS/BigQueryクライアントラッパー
 │   └── logging.py          # structlog設定
-├── data_collector/         # JRA APIからのデータ収集
+├── data_collector/         # データ収集・インポート（Kaggle CSV / JRA API）
 ├── feature_engineering/    # 特徴量抽出パイプライン
 ├── model_training/         # モデル学習・実験管理（MLflow）
 ├── predictor/              # 予測実行
@@ -75,6 +75,22 @@ cp .env.example .env
 
 # GCP認証
 gcloud auth application-default login
+
+# Kaggle データセットのダウンロード（要 kaggle CLI）
+kaggle datasets download -d takamotoki/jra-horse-racing-dataset -p data/raw/kaggle/ --unzip
+```
+
+### Kaggle データインポート
+
+```bash
+# 全データをインポート（ドライラン: ストレージ保存なし）
+uv run python -m src.data_collector --source kaggle --dry-run
+
+# 日付範囲を指定してインポート
+uv run python -m src.data_collector --source kaggle --date-from 2020-01-01 --date-to 2021-07-31
+
+# GCS/BigQuery に保存（GCP認証が必要）
+uv run python -m src.data_collector --source kaggle
 ```
 
 ### テスト
