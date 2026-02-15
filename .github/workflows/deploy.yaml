@@ -70,10 +70,17 @@ jobs:
       - name: Configure Docker
         run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
 
+      - name: Build and push Docker image
+        run: |
+          IMAGE=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ml-pipeline/ml-pipeline:${{ github.sha }}
+          docker build -t "${IMAGE}" .
+          docker push "${IMAGE}"
+
       - name: Deploy to Cloud Run Jobs
         run: |
+          IMAGE=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ml-pipeline/ml-pipeline:${{ github.sha }}
           gcloud run jobs deploy ${{ env.CLOUD_RUN_JOB }} \
-            --source . \
+            --image "${IMAGE}" \
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_ID }} \
             --memory 512Mi \

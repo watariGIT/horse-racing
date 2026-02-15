@@ -86,19 +86,23 @@ resource "google_storage_bucket" "models" {
   }
 }
 
-resource "google_storage_bucket" "cloudbuild" {
-  name     = "${var.project_id}_cloudbuild"
-  location = var.region
+# -------------------------------------------------------------------
+# Artifact Registry (Docker images for Cloud Run)
+# -------------------------------------------------------------------
 
-  uniform_bucket_level_access = true
-  force_destroy               = var.environment == "dev"
+resource "google_artifact_registry_repository" "ml_pipeline" {
+  location      = var.region
+  repository_id = "ml-pipeline"
+  format        = "DOCKER"
 
-  lifecycle_rule {
-    condition {
-      age = 30
-    }
-    action {
-      type = "Delete"
+  cleanup_policy_dry_run = false
+
+  cleanup_policies {
+    id     = "keep-recent"
+    action = "KEEP"
+
+    most_recent_versions {
+      keep_count = 5
     }
   }
 
