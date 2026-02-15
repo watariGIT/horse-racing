@@ -16,6 +16,10 @@ cloud_run:
   concurrency: 1
   timeout: 300
 
+kaggle:
+  data_dir: data/raw/kaggle
+  race_result_file: "race_result.csv"
+
 model:
   default_type: lgbm_classifier
   feature_version: v1

@@ -47,6 +47,11 @@ class CloudRunConfig(BaseModel):
     timeout: int = 300
 
 
+class KaggleConfig(BaseModel):
+    data_dir: str = "data/raw/kaggle"
+    race_result_file: str = "race_result.csv"
+
+
 class LoggingConfig(BaseModel):
     level: str = "INFO"
     format: str = "json"
@@ -70,6 +75,7 @@ class AppSettings(BaseSettings):
     bigquery: BigQueryConfig = Field(default_factory=BigQueryConfig)
     gcs: GCSConfig = Field(default_factory=GCSConfig)
     cloud_run: CloudRunConfig = Field(default_factory=CloudRunConfig)
+    kaggle: KaggleConfig = Field(default_factory=KaggleConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
 
