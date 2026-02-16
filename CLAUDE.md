@@ -157,13 +157,21 @@ PRマージ前にデプロイエラーを検知するための仕組み。
 
 ### Terraform
 
-Terraform stateはGCS (`horse-racing-ml-dev-terraform-state`) で管理。
+Terraform stateはGCS (`horse-racing-ml-dev-terraform-state`) で管理。Terraform Workspacesでdev/prod環境を切り替える。
 
 ```bash
 cd infrastructure/terraform
 terraform init
-terraform plan -var="project_id=horse-racing-ml-dev"
-terraform apply -var="project_id=horse-racing-ml-dev"
+
+# dev環境
+terraform workspace select dev
+terraform plan -var-file=dev.tfvars
+terraform apply -var-file=dev.tfvars
+
+# prod環境
+terraform workspace select prod
+terraform plan -var-file=prod.tfvars
+terraform apply -var-file=prod.tfvars
 ```
 
 ## コーディング規約

@@ -19,6 +19,10 @@ provider "google" {
   region  = var.region
 }
 
+locals {
+  environment = terraform.workspace
+}
+
 # -------------------------------------------------------------------
 # GCS Buckets
 # -------------------------------------------------------------------
@@ -28,7 +32,7 @@ resource "google_storage_bucket" "raw_data" {
   location = var.region
 
   uniform_bucket_level_access = true
-  force_destroy               = var.environment == "dev"
+  force_destroy               = local.environment == "dev"
 
   lifecycle_rule {
     condition {
@@ -41,7 +45,7 @@ resource "google_storage_bucket" "raw_data" {
   }
 
   labels = {
-    environment = var.environment
+    environment = local.environment
     managed_by  = "terraform"
   }
 }
@@ -51,7 +55,7 @@ resource "google_storage_bucket" "processed" {
   location = var.region
 
   uniform_bucket_level_access = true
-  force_destroy               = var.environment == "dev"
+  force_destroy               = local.environment == "dev"
 
   lifecycle_rule {
     condition {
@@ -64,7 +68,7 @@ resource "google_storage_bucket" "processed" {
   }
 
   labels = {
-    environment = var.environment
+    environment = local.environment
     managed_by  = "terraform"
   }
 }
@@ -74,14 +78,14 @@ resource "google_storage_bucket" "models" {
   location = var.region
 
   uniform_bucket_level_access = true
-  force_destroy               = var.environment == "dev"
+  force_destroy               = local.environment == "dev"
 
   versioning {
     enabled = true
   }
 
   labels = {
-    environment = var.environment
+    environment = local.environment
     managed_by  = "terraform"
   }
 }
@@ -107,7 +111,7 @@ resource "google_artifact_registry_repository" "ml_pipeline" {
   }
 
   labels = {
-    environment = var.environment
+    environment = local.environment
     managed_by  = "terraform"
   }
 }
@@ -117,13 +121,13 @@ resource "google_artifact_registry_repository" "ml_pipeline" {
 # -------------------------------------------------------------------
 
 resource "google_bigquery_dataset" "horse_racing" {
-  dataset_id = "horse_racing${var.environment == "dev" ? "_dev" : ""}"
+  dataset_id = "horse_racing${local.environment == "dev" ? "_dev" : ""}"
   location   = var.bigquery_location
 
-  delete_contents_on_destroy = var.environment == "dev"
+  delete_contents_on_destroy = local.environment == "dev"
 
   labels = {
-    environment = var.environment
+    environment = local.environment
     managed_by  = "terraform"
   }
 }
@@ -133,7 +137,7 @@ resource "google_bigquery_dataset" "horse_racing" {
 resource "google_bigquery_table" "races_raw" {
   dataset_id          = google_bigquery_dataset.horse_racing.dataset_id
   table_id            = "races_raw"
-  deletion_protection = var.environment == "prod"
+  deletion_protection = local.environment == "prod"
 
   time_partitioning {
     type  = "DAY"
@@ -141,7 +145,7 @@ resource "google_bigquery_table" "races_raw" {
   }
 
   labels = {
-    environment = var.environment
+    environment = local.environment
   }
 
   schema = jsonencode([
@@ -162,7 +166,7 @@ resource "google_bigquery_table" "races_raw" {
 resource "google_bigquery_table" "features" {
   dataset_id          = google_bigquery_dataset.horse_racing.dataset_id
   table_id            = "features"
-  deletion_protection = var.environment == "prod"
+  deletion_protection = local.environment == "prod"
 
   time_partitioning {
     type  = "DAY"
@@ -172,7 +176,7 @@ resource "google_bigquery_table" "features" {
   clustering = ["feature_version"]
 
   labels = {
-    environment = var.environment
+    environment = local.environment
   }
 
   schema = jsonencode([
@@ -188,7 +192,7 @@ resource "google_bigquery_table" "features" {
 resource "google_bigquery_table" "predictions" {
   dataset_id          = google_bigquery_dataset.horse_racing.dataset_id
   table_id            = "predictions"
-  deletion_protection = var.environment == "prod"
+  deletion_protection = local.environment == "prod"
 
   time_partitioning {
     type  = "DAY"
@@ -196,7 +200,7 @@ resource "google_bigquery_table" "predictions" {
   }
 
   labels = {
-    environment = var.environment
+    environment = local.environment
   }
 
   schema = jsonencode([
@@ -212,7 +216,7 @@ resource "google_bigquery_table" "predictions" {
 resource "google_bigquery_table" "horse_results_raw" {
   dataset_id          = google_bigquery_dataset.horse_racing.dataset_id
   table_id            = "horse_results_raw"
-  deletion_protection = var.environment == "prod"
+  deletion_protection = local.environment == "prod"
 
   time_partitioning {
     type  = "DAY"
@@ -220,7 +224,7 @@ resource "google_bigquery_table" "horse_results_raw" {
   }
 
   labels = {
-    environment = var.environment
+    environment = local.environment
   }
 
   # Schema matches auto-detected types from load_table_from_dataframe:
@@ -257,7 +261,7 @@ resource "google_bigquery_table" "horse_results_raw" {
 resource "google_bigquery_table" "jockey_results_raw" {
   dataset_id          = google_bigquery_dataset.horse_racing.dataset_id
   table_id            = "jockey_results_raw"
-  deletion_protection = var.environment == "prod"
+  deletion_protection = local.environment == "prod"
 
   time_partitioning {
     type  = "DAY"
@@ -265,7 +269,7 @@ resource "google_bigquery_table" "jockey_results_raw" {
   }
 
   labels = {
-    environment = var.environment
+    environment = local.environment
   }
 
   # Schema matches auto-detected types from load_table_from_dataframe
@@ -283,10 +287,10 @@ resource "google_bigquery_table" "jockey_results_raw" {
 resource "google_bigquery_table" "evaluation_results" {
   dataset_id          = google_bigquery_dataset.horse_racing.dataset_id
   table_id            = "evaluation_results"
-  deletion_protection = var.environment == "prod"
+  deletion_protection = local.environment == "prod"
 
   labels = {
-    environment = var.environment
+    environment = local.environment
   }
 
   schema = jsonencode([
@@ -316,7 +320,7 @@ resource "google_secret_manager_secret" "jra_api_key" {
   }
 
   labels = {
-    environment = var.environment
+    environment = local.environment
     managed_by  = "terraform"
   }
 }

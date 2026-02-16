@@ -9,17 +9,6 @@ variable "region" {
   default     = "us-central1"
 }
 
-variable "environment" {
-  description = "Environment name (dev or prod)"
-  type        = string
-  default     = "dev"
-
-  validation {
-    condition     = contains(["dev", "prod"], var.environment)
-    error_message = "Environment must be 'dev' or 'prod'."
-  }
-}
-
 variable "bigquery_location" {
   description = "BigQuery dataset location"
   type        = string
