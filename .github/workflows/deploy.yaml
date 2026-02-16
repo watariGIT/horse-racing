@@ -83,7 +83,7 @@ jobs:
             --image "${IMAGE}" \
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_ID }} \
-            --memory 512Mi \
+            --memory 2Gi \
             --cpu 1 \
             --max-retries 0 \
             --task-timeout 3600 \
