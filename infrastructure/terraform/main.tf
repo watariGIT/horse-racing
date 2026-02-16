@@ -145,17 +145,17 @@ resource "google_bigquery_table" "races_raw" {
   }
 
   schema = jsonencode([
-    { name = "race_id", type = "STRING", mode = "REQUIRED" },
-    { name = "race_date", type = "DATE", mode = "REQUIRED" },
+    { name = "race_id", type = "STRING", mode = "NULLABLE" },
+    { name = "race_date", type = "TIMESTAMP", mode = "NULLABLE" },
     { name = "race_name", type = "STRING", mode = "NULLABLE" },
-    { name = "venue", type = "STRING", mode = "NULLABLE" },
     { name = "race_number", type = "INTEGER", mode = "NULLABLE" },
+    { name = "course", type = "STRING", mode = "NULLABLE" },
     { name = "distance", type = "INTEGER", mode = "NULLABLE" },
-    { name = "surface", type = "STRING", mode = "NULLABLE" },
-    { name = "weather", type = "STRING", mode = "NULLABLE" },
+    { name = "track_type", type = "STRING", mode = "NULLABLE" },
     { name = "track_condition", type = "STRING", mode = "NULLABLE" },
-    { name = "raw_data", type = "JSON", mode = "NULLABLE" },
-    { name = "collected_at", type = "TIMESTAMP", mode = "REQUIRED" },
+    { name = "weather", type = "STRING", mode = "NULLABLE" },
+    { name = "grade", type = "STRING", mode = "NULLABLE" },
+    { name = "num_entries", type = "INTEGER", mode = "NULLABLE" },
   ])
 }
 
