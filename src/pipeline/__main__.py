@@ -41,13 +41,13 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--date-from",
         type=str,
         default=None,
-        help="Start date filter (YYYY-MM-DD)",
+        help="Start date filter (YYYY-MM-DD). Default: last 5 years from 2021-07-31",
     )
     parser.add_argument(
         "--date-to",
         type=str,
         default=None,
-        help="End date filter (YYYY-MM-DD)",
+        help="End date filter (YYYY-MM-DD). Default: 2021-07-31",
     )
     parser.add_argument(
         "--train-window",

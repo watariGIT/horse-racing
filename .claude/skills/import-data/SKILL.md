@@ -65,6 +65,8 @@ Kaggle データセットをダウンロードし、BigQuery にインポート�
 | prod | `ENVIRONMENT=prod`（デフォルト） | `horse_racing` |
 | dev | `ENVIRONMENT=dev` | `horse_racing_dev` |
 
+**注意**: パイプライン実行時のデフォルトデータソースは `bigquery` です。インポート完了後はそのまま `uv run python -m src.pipeline` でBigQueryからデータを読み込みます。
+
 ## インポートされるテーブル
 
 | テーブル名 | 内容 | パーティション |

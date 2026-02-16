@@ -93,6 +93,19 @@ uv run python -m src.data_collector --source kaggle --date-from 2020-01-01 --dat
 uv run python -m src.data_collector --source kaggle
 ```
 
+### パイプライン実行
+
+```bash
+# デフォルト実行（BigQueryから直近5年分のデータを使用）
+uv run python -m src.pipeline --stage full
+
+# 日付範囲を明示的に指定
+uv run python -m src.pipeline --stage full --date-from 2018-01-01 --date-to 2021-07-31
+```
+
+- **データソース**: デフォルトは `bigquery`（環境変数 `PIPELINE_DATA_SOURCE` で変更可能）
+- **デフォルト期間**: `date_from` / `date_to` 未指定時は直近5年（2016-08-01 〜 2021-07-31）を自動適用
+
 ### テスト
 
 ```bash

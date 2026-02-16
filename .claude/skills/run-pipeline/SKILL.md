@@ -11,19 +11,20 @@ prod環境の `ml-pipeline` Cloud Run Job を実行し、バックテストレ�
 
 1. **パイプライン実行**: 以下のコマンドでCloud Run Jobを実行し完了を待機する
    ```bash
-   # デフォルト（全データ使用）
+   # デフォルト（BigQueryから直近5年分のデータを使用）
    gcloud run jobs execute ml-pipeline \
      --region us-central1 \
      --project horse-racing-ml-dev \
      --wait
 
-   # 日付範囲を指定して実行（推奨: 直近10年）
+   # 日付範囲を指定して実行
    gcloud run jobs execute ml-pipeline \
      --region us-central1 \
      --project horse-racing-ml-dev \
      --args="uv,run,python,-m,src.pipeline,--stage,full,--date-from,2012-01-01" \
      --wait
    ```
+   - デフォルトではBigQueryから直近5年分（2016-08-01〜2021-07-31）のデータを使用
    - `--args` を使用する場合は `uv,run,python,-m,src.pipeline` から全て指定する（CMD をオーバーライドするため）
 
 2. **実行結果確認**: コマンドの終了コードで成功/失敗を判定する

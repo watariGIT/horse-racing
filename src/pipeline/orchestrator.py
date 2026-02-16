@@ -7,6 +7,7 @@ evaluation, and result persistence across the full pipeline.
 from __future__ import annotations
 
 import os
+from datetime import date, timedelta
 from typing import Any
 
 import pandas as pd
@@ -59,8 +60,20 @@ class PipelineOrchestrator:
         self._train_window = train_window
         self._test_window = test_window
         self._model_name = model_name
-        self._data_source = data_source or os.getenv("PIPELINE_DATA_SOURCE", "csv")
+        self._data_source = data_source or os.getenv("PIPELINE_DATA_SOURCE", "bigquery")
         self._settings = get_settings()
+
+        # Apply default date range (last 5 years) when not specified
+        if self._date_from is None and self._date_to is None:
+            default_to = date(2021, 7, 31)
+            default_from = default_to - timedelta(days=365 * 5)
+            self._date_from = default_from.isoformat()
+            self._date_to = default_to.isoformat()
+            logger.info(
+                "No date range specified, using default period",
+                date_from=self._date_from,
+                date_to=self._date_to,
+            )
 
         # Pipeline state
         self._raw_df: pl.DataFrame | None = None
