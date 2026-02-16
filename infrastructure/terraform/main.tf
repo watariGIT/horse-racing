@@ -209,6 +209,101 @@ resource "google_bigquery_table" "predictions" {
   ])
 }
 
+resource "google_bigquery_table" "horse_results_raw" {
+  dataset_id          = google_bigquery_dataset.horse_racing.dataset_id
+  table_id            = "horse_results_raw"
+  deletion_protection = var.environment == "prod"
+
+  time_partitioning {
+    type  = "DAY"
+    field = "race_date"
+  }
+
+  labels = {
+    environment = var.environment
+  }
+
+  # Schema matches auto-detected types from load_table_from_dataframe:
+  # - race_date: TIMESTAMP (pandas datetime64 -> BQ TIMESTAMP)
+  # - finish_position: FLOAT (nullable Int32 -> BQ FLOAT)
+  # - All columns NULLABLE (pandas default)
+  schema = jsonencode([
+    { name = "horse_id", type = "STRING", mode = "NULLABLE" },
+    { name = "race_id", type = "STRING", mode = "NULLABLE" },
+    { name = "race_date", type = "TIMESTAMP", mode = "NULLABLE" },
+    { name = "course", type = "STRING", mode = "NULLABLE" },
+    { name = "distance", type = "INTEGER", mode = "NULLABLE" },
+    { name = "track_condition", type = "STRING", mode = "NULLABLE" },
+    { name = "finish_position", type = "FLOAT", mode = "NULLABLE" },
+    { name = "time", type = "STRING", mode = "NULLABLE" },
+    { name = "weight", type = "FLOAT64", mode = "NULLABLE" },
+    { name = "jockey_id", type = "STRING", mode = "NULLABLE" },
+    { name = "sex", type = "STRING", mode = "NULLABLE" },
+    { name = "age", type = "INTEGER", mode = "NULLABLE" },
+    { name = "carried_weight", type = "FLOAT64", mode = "NULLABLE" },
+    { name = "win_odds", type = "FLOAT64", mode = "NULLABLE" },
+    { name = "win_favorite", type = "INTEGER", mode = "NULLABLE" },
+    { name = "corner_position_1", type = "INTEGER", mode = "NULLABLE" },
+    { name = "corner_position_2", type = "INTEGER", mode = "NULLABLE" },
+    { name = "corner_position_3", type = "INTEGER", mode = "NULLABLE" },
+    { name = "corner_position_4", type = "INTEGER", mode = "NULLABLE" },
+    { name = "last_3f_time", type = "FLOAT64", mode = "NULLABLE" },
+    { name = "horse_weight_change", type = "FLOAT64", mode = "NULLABLE" },
+    { name = "trainer", type = "STRING", mode = "NULLABLE" },
+    { name = "prize_money", type = "FLOAT64", mode = "NULLABLE" },
+  ])
+}
+
+resource "google_bigquery_table" "jockey_results_raw" {
+  dataset_id          = google_bigquery_dataset.horse_racing.dataset_id
+  table_id            = "jockey_results_raw"
+  deletion_protection = var.environment == "prod"
+
+  time_partitioning {
+    type  = "DAY"
+    field = "race_date"
+  }
+
+  labels = {
+    environment = var.environment
+  }
+
+  # Schema matches auto-detected types from load_table_from_dataframe
+  schema = jsonencode([
+    { name = "jockey_id", type = "STRING", mode = "NULLABLE" },
+    { name = "race_id", type = "STRING", mode = "NULLABLE" },
+    { name = "race_date", type = "TIMESTAMP", mode = "NULLABLE" },
+    { name = "course", type = "STRING", mode = "NULLABLE" },
+    { name = "distance", type = "INTEGER", mode = "NULLABLE" },
+    { name = "horse_id", type = "STRING", mode = "NULLABLE" },
+    { name = "finish_position", type = "FLOAT", mode = "NULLABLE" },
+  ])
+}
+
+resource "google_bigquery_table" "evaluation_results" {
+  dataset_id          = google_bigquery_dataset.horse_racing.dataset_id
+  table_id            = "evaluation_results"
+  deletion_protection = var.environment == "prod"
+
+  labels = {
+    environment = var.environment
+  }
+
+  schema = jsonencode([
+    { name = "model_name", type = "STRING", mode = "REQUIRED" },
+    { name = "win_accuracy", type = "FLOAT64", mode = "NULLABLE" },
+    { name = "place_accuracy", type = "FLOAT64", mode = "NULLABLE" },
+    { name = "top3_accuracy", type = "FLOAT64", mode = "NULLABLE" },
+    { name = "ndcg", type = "FLOAT64", mode = "NULLABLE" },
+    { name = "ndcg_at_3", type = "FLOAT64", mode = "NULLABLE" },
+    { name = "auc_roc", type = "FLOAT64", mode = "NULLABLE" },
+    { name = "log_loss", type = "FLOAT64", mode = "NULLABLE" },
+    { name = "precision", type = "FLOAT64", mode = "NULLABLE" },
+    { name = "recall", type = "FLOAT64", mode = "NULLABLE" },
+    { name = "f1", type = "FLOAT64", mode = "NULLABLE" },
+  ])
+}
+
 # -------------------------------------------------------------------
 # Secret Manager
 # -------------------------------------------------------------------

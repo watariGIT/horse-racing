@@ -127,6 +127,14 @@ PRマージ前にデプロイエラーを検知するための仕組み。
 - **dev環境デプロイ（`preview-deploy` ラベル付与時）**: PRに `preview-deploy` ラベルを付与すると、dev環境（`ENVIRONMENT=dev`）でCloud Run Job `ml-pipeline-preview` にデプロイ
 - **パイプライン実行+レポート**: preview-report skill（`.claude/skills/preview-report/`）で手動実行。パイプラインを実行し、精度メトリクスをPRコメントに投稿
 
+#### Claude Code Skills
+
+| Skill | パス | 用途 |
+|-------|------|------|
+| `preview-report` | `.claude/skills/preview-report/` | dev環境パイプライン実行→PRコメント投稿 |
+| `run-pipeline` | `.claude/skills/run-pipeline/` | prod環境パイプライン実行→レポート表示 |
+| `import-data` | `.claude/skills/import-data/` | Kaggleデータダウンロード→BigQueryインポート |
+
 #### 環境の使い分け
 
 | 環境 | トリガー | ENVIRONMENT | BigQueryデータセット | 用途 |
