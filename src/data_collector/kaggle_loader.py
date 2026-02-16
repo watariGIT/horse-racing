@@ -30,27 +30,40 @@ _COLUMN_MAP_JA: dict[str, str] = {
     "馬番": "post_position",
     "馬名": "horse_name",
     "性齢": "sex_age",
+    "性別": "sex",
+    "馬齢": "age",
     "斤量": "carried_weight",
     "騎手": "jockey_name",
     "タイム": "time",
     "着差": "margin",
     "通過": "corner_positions",
+    "1コーナー": "corner_position_1",
+    "2コーナー": "corner_position_2",
+    "3コーナー": "corner_position_3",
+    "4コーナー": "corner_position_4",
     "上り": "last_3f_time",
     "単勝": "win_odds",
     "人気": "win_favorite",
     "馬体重": "horse_weight",
+    "場体重増減": "horse_weight_change",
     "調教師": "trainer",
     "馬主": "owner",
     "賞金": "prize_money",
+    "賞金(万円)": "prize_money",
     "競馬場名": "course",
     "距離": "distance",
+    "距離(m)": "distance",
     "天候": "weather",
     "馬場状態": "track_condition",
+    "馬場状態1": "track_condition",
     "芝・ダート": "track_type",
+    "芝・ダート区分": "track_type",
     "レース名": "race_name",
     "レース番号": "race_number",
     "リステッド・重賞": "grade",
+    "リステッド・重賞競走": "grade",
     "日付": "race_date",
+    "レース日付": "race_date",
 }
 
 _COLUMN_MAP_EN: dict[str, str] = {
@@ -336,6 +349,12 @@ class KaggleDataLoader:
                 .alias("age"),
             ).drop("sex_age")
 
+        # --- Cast separate sex/age columns if present ---
+        if "age" in df.columns and "sex_age" not in df.columns:
+            df = df.with_columns(
+                pl.col("age").cast(pl.Int32, strict=False).alias("age")
+            )
+
         # --- Parse corner_positions → corner_position_1..4 ---
         if "corner_positions" in df.columns:
             for i, alias in enumerate(
@@ -359,9 +378,21 @@ class KaggleDataLoader:
                 )
             df = df.drop("corner_positions")
 
+        # --- Cast pre-split corner columns to Int32 ---
+        for col_name in [
+            "corner_position_1",
+            "corner_position_2",
+            "corner_position_3",
+            "corner_position_4",
+        ]:
+            if col_name in df.columns and "corner_positions" not in df.columns:
+                df = df.with_columns(
+                    pl.col(col_name).cast(pl.Int32, strict=False).alias(col_name)
+                )
+
         # --- Parse horse_weight → weight + horse_weight_change ---
         if "horse_weight" in df.columns:
-            df = df.with_columns(
+            weight_exprs = [
                 pl.col("horse_weight")
                 .cast(pl.Utf8)
                 .map_elements(
@@ -369,14 +400,27 @@ class KaggleDataLoader:
                     return_dtype=pl.Float64,
                 )
                 .alias("weight"),
-                pl.col("horse_weight")
-                .cast(pl.Utf8)
-                .map_elements(
-                    lambda x: _parse_horse_weight(x)[1],
-                    return_dtype=pl.Float64,
+            ]
+            # Only derive horse_weight_change from parsing if not already present
+            if "horse_weight_change" not in df.columns:
+                weight_exprs.append(
+                    pl.col("horse_weight")
+                    .cast(pl.Utf8)
+                    .map_elements(
+                        lambda x: _parse_horse_weight(x)[1],
+                        return_dtype=pl.Float64,
+                    )
+                    .alias("horse_weight_change"),
                 )
-                .alias("horse_weight_change"),
-            ).drop("horse_weight")
+            df = df.with_columns(weight_exprs).drop("horse_weight")
+
+        # --- Cast horse_weight_change to float if already present ---
+        if "horse_weight_change" in df.columns:
+            df = df.with_columns(
+                pl.col("horse_weight_change")
+                .cast(pl.Float64, strict=False)
+                .alias("horse_weight_change")
+            )
 
         # --- Convert race_date to Date type ---
         if "race_date" in df.columns:
