@@ -140,6 +140,44 @@ class TestDataPreparer:
 class TestPipelineOrchestrator:
     """Tests for PipelineOrchestrator stage methods."""
 
+    def test_default_data_source_is_bigquery(self) -> None:
+        """Default data source should be bigquery."""
+        orchestrator = PipelineOrchestrator()
+        assert orchestrator._data_source == "bigquery"
+
+    def test_default_data_source_env_override(self) -> None:
+        """PIPELINE_DATA_SOURCE env var should override default."""
+        with patch.dict("os.environ", {"PIPELINE_DATA_SOURCE": "csv"}):
+            orchestrator = PipelineOrchestrator()
+            assert orchestrator._data_source == "csv"
+
+    def test_default_date_range_applied(self) -> None:
+        """When no dates specified, default 5-year range should be applied."""
+        orchestrator = PipelineOrchestrator()
+        assert orchestrator._date_from is not None
+        assert orchestrator._date_to == "2021-07-31"
+        # date_from should be approximately 5 years before date_to
+        from datetime import date as _date
+
+        parsed_from = _date.fromisoformat(orchestrator._date_from)
+        parsed_to = _date.fromisoformat(orchestrator._date_to)
+        delta_days = (parsed_to - parsed_from).days
+        assert 1825 <= delta_days <= 1827  # 5 years (accounting for leap years)
+
+    def test_explicit_dates_not_overridden(self) -> None:
+        """Explicit date_from/date_to should not be overridden."""
+        orchestrator = PipelineOrchestrator(
+            date_from="2020-01-01", date_to="2021-06-30"
+        )
+        assert orchestrator._date_from == "2020-01-01"
+        assert orchestrator._date_to == "2021-06-30"
+
+    def test_partial_dates_not_overridden(self) -> None:
+        """When only one date is specified, defaults should not apply."""
+        orchestrator = PipelineOrchestrator(date_from="2019-01-01")
+        assert orchestrator._date_from == "2019-01-01"
+        assert orchestrator._date_to is None
+
     def test_import_data_csv(self, raw_race_df: pl.DataFrame) -> None:
         """import_data should load from CSV when source is csv."""
         orchestrator = PipelineOrchestrator(data_source="csv")
