@@ -52,6 +52,11 @@ class KaggleConfig(BaseModel):
     race_result_file: str = "race_result.csv"
 
 
+class ModelConfig(BaseModel):
+    default_type: str = "lgbm_classifier"
+    feature_version: str = "v1"
+
+
 class LoggingConfig(BaseModel):
     level: str = "INFO"
     format: str = "json"
@@ -76,6 +81,7 @@ class AppSettings(BaseSettings):
     gcs: GCSConfig = Field(default_factory=GCSConfig)
     cloud_run: CloudRunConfig = Field(default_factory=CloudRunConfig)
     kaggle: KaggleConfig = Field(default_factory=KaggleConfig)
+    model: ModelConfig = Field(default_factory=ModelConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
 
