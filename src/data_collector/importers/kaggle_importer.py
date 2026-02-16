@@ -161,6 +161,7 @@ class KaggleImporter:
         horse_results: pl.DataFrame,
         jockey_results: pl.DataFrame,
         partition_key: str,
+        write_disposition: str = "WRITE_TRUNCATE",
     ) -> None:
         """Persist extracted DataFrames to GCS and BigQuery.
 
@@ -169,6 +170,7 @@ class KaggleImporter:
             horse_results: Horse results DataFrame.
             jockey_results: Jockey results DataFrame.
             partition_key: Partition key for GCS storage.
+            write_disposition: BigQuery write disposition.
         """
         if self._gcs_writer:
             self._gcs_writer.write_parquet(races, "races", partition_key)
@@ -183,19 +185,19 @@ class KaggleImporter:
             self._bq_writer.write(
                 races,
                 "races_raw",
-                write_disposition="WRITE_TRUNCATE",
+                write_disposition=write_disposition,
                 partition_field="race_date",
             )
             self._bq_writer.write(
                 horse_results,
                 "horse_results_raw",
-                write_disposition="WRITE_TRUNCATE",
+                write_disposition=write_disposition,
                 partition_field="race_date",
             )
             self._bq_writer.write(
                 jockey_results,
                 "jockey_results_raw",
-                write_disposition="WRITE_TRUNCATE",
+                write_disposition=write_disposition,
                 partition_field="race_date",
             )
 
@@ -276,6 +278,7 @@ class KaggleImporter:
                 .to_list()
             )
 
+            first_batch = True
             for year in years:
                 if year is None:
                     continue
@@ -286,7 +289,11 @@ class KaggleImporter:
                 year_jr = jockey_results.filter(year_filter)
 
                 partition_key = f"kaggle/{year}"
-                self._persist_batch(year_races, year_hr, year_jr, partition_key)
+                disposition = "WRITE_TRUNCATE" if first_batch else "WRITE_APPEND"
+                self._persist_batch(
+                    year_races, year_hr, year_jr, partition_key, disposition
+                )
+                first_batch = False
 
                 logger.info(
                     "Persisted year batch",
