@@ -96,6 +96,25 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
     return result
 
 
+def _resolve_env_vars(config: dict[str, Any]) -> dict[str, Any]:
+    """Resolve ${VAR} placeholders in config values from environment."""
+    import re
+
+    result: dict[str, Any] = {}
+    for key, value in config.items():
+        if isinstance(value, dict):
+            result[key] = _resolve_env_vars(value)
+        elif isinstance(value, str):
+            result[key] = re.sub(
+                r"\$\{(\w+)\}",
+                lambda m: os.getenv(m.group(1), m.group(0)),
+                value,
+            )
+        else:
+            result[key] = value
+    return result
+
+
 def _load_yaml_config(env: Environment) -> dict[str, Any]:
     """Load and merge YAML config files (base + environment-specific)."""
     config_dir = Path(__file__).resolve().parent.parent.parent / "config"
@@ -115,7 +134,7 @@ def _load_yaml_config(env: Environment) -> dict[str, Any]:
             env_config = yaml.safe_load(f) or {}
             config = _deep_merge(config, env_config)
 
-    return config
+    return _resolve_env_vars(config)
 
 
 def _resolve_gcs_buckets(settings: AppSettings) -> AppSettings:
@@ -128,8 +147,7 @@ def _resolve_gcs_buckets(settings: AppSettings) -> AppSettings:
             settings.gcs.bucket_processed = f"{project_id}-processed"
         if not settings.gcs.bucket_models:
             settings.gcs.bucket_models = f"{project_id}-models"
-        if not settings.gcp.project_id:
-            settings.gcp.project_id = project_id
+        settings.gcp.project_id = project_id
     return settings
 
 
