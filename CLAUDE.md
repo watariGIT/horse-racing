@@ -114,7 +114,7 @@ uv run mypy src/                        # 型チェック
 
 - **PR時**: GitHub Actionsでテスト（test.yaml）とリント（lint.yaml）を自動実行
 - **PR時**: Docker Buildの検証を全PRで自動実行（preview-deploy.yaml）
-- **PR時（ラベル）**: `preview-deploy` ラベル付与でdev環境へのフルパイプライン検証を実行（preview-deploy.yaml）
+- **PR時（ラベル）**: `preview-deploy` ラベル付与でdev環境へのデプロイを実行（preview-deploy.yaml）
 - **main push時**: テスト・リント後、GCP Cloud Run Jobsへprod環境デプロイ（deploy.yaml）
 - **デプロイ方式**: CIランナー上で `docker build/push` → Artifact Registry → `--image` で Cloud Run Jobs にデプロイ
 - 認証: Workload Identity Federation（`watariGIT/horse-racing` リポジトリに制限）
@@ -124,12 +124,8 @@ uv run mypy src/                        # 型チェック
 PRマージ前にデプロイエラーを検知するための仕組み。
 
 - **Docker Build検証（全PR自動実行）**: `docker build` のみ実行し、依存パッケージ不足（libgomp, db-dtypes等）をビルド時に検出
-- **フルパイプライン検証（`preview-deploy` ラベル付与時）**:
-  1. PRに `preview-deploy` ラベルを付与すると、dev環境（`ENVIRONMENT=dev`）でCloud Run Job `ml-pipeline-preview` にデプロイ・実行
-  2. パイプライン完了後、GCSからバックテストレポートを取得
-  3. PRコメントに精度メトリクス（Win Accuracy, AUC ROC, Log Loss等）を自動投稿
-  4. 同一PRへの再push時は既存コメントを更新（重複なし）
-  5. パイプライン失敗時もFailed状態のコメントを投稿
+- **dev環境デプロイ（`preview-deploy` ラベル付与時）**: PRに `preview-deploy` ラベルを付与すると、dev環境（`ENVIRONMENT=dev`）でCloud Run Job `ml-pipeline-preview` にデプロイ
+- **パイプライン実行+レポート**: preview-report skill（`.claude/skills/preview-report/`）で手動実行。パイプラインを実行し、精度メトリクスをPRコメントに投稿
 
 #### 環境の使い分け
 
@@ -182,27 +178,3 @@ terraform apply -var="project_id=horse-racing-ml-dev"
 - `main`: プロダクション。直接プッシュ禁止。
 - 開発ブランチ: 機能名・変更名でブランチを作成（例: `fix-deploy-permissions`, `add-lint-to-deploy`）。PRでmainにマージ。
 - Squash mergeを使用。
-
-## PR作成前のドキュメント確認ルール
-
-PR作成前に、以下のドキュメント更新が必要か確認すること:
-
-- **CLAUDE.md**: 設定管理・CI/CD・コーディング規約・アーキテクチャに変更がある場合は更新必須
-- **README**: ユーザー向けセットアップ手順・使用方法に変更がある場合は更新必須
-- **config/**: 新しい設定項目の追加・既存設定の変更時は `base.yaml` / `dev.yaml` / `prod.yaml` を更新
-
-特に以下のケースでは必ずドキュメントを更新する:
-- 新しい環境変数の追加
-- CI/CDワークフローの追加・変更
-- 新機能の追加
-- 設定ファイルフォーマットの変更
-
-## Issue化ルール
-
-- 実装中に発見した改善点・将来対応事項はGitHub Issueとして起票する
-- 現在のPRスコープ外の作業をPRに含めない
-- Issueには適切なラベルを付与する:
-  - `enhancement`: 機能改善・新機能
-  - `bug`: バグ修正
-  - `infrastructure`: インフラ・CI/CD関連
-  - `P0` ~ `P3`: 優先度（P0が最高）
