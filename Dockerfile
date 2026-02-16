@@ -20,4 +20,4 @@ RUN uv sync --no-dev
 
 EXPOSE 8080
 
-CMD ["uv", "run", "python", "-m", "src.predictor"]
+CMD ["uv", "run", "python", "-m", "src.pipeline", "--stage", "full"]

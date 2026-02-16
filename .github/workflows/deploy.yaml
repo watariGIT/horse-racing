@@ -88,4 +88,4 @@ jobs:
             --max-retries 0 \
             --task-timeout 3600 \
             --service-account ${{ secrets.SERVICE_ACCOUNT }} \
-            --set-env-vars "ENVIRONMENT=dev,GCP_PROJECT_ID=${{ env.GCP_PROJECT_ID }}"
+            --set-env-vars "ENVIRONMENT=dev,GCP_PROJECT_ID=${{ env.GCP_PROJECT_ID }},PIPELINE_DATA_SOURCE=bigquery"
