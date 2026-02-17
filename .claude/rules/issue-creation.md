@@ -1,9 +1,9 @@
-# Issue化ルール
+# Issue Creation Rule
 
-- 実装中に発見した改善点・将来対応事項はGitHub Issueとして起票する
-- 現在のPRスコープ外の作業をPRに含めない
-- Issueには適切なラベルを付与する:
-  - `enhancement`: 機能改善・新機能
-  - `bug`: バグ修正
-  - `infrastructure`: インフラ・CI/CD関連
-  - `P0` ~ `P3`: 優先度（P0が最高）
+- File discovered improvements and future work items as GitHub Issues
+- Do not include out-of-scope work in the current PR
+- Apply appropriate labels:
+  - `enhancement`: Feature improvements / new features
+  - `bug`: Bug fixes
+  - `infrastructure`: Infra / CI/CD related
+  - `P0` - `P3`: Priority levels (P0 = highest)

@@ -33,6 +33,7 @@ env/
 *.json
 !config/*.json
 !tests/fixtures/*.json
+!.claude/settings.json
 service-account*.json
 application_default_credentials.json
 

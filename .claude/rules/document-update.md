@@ -1,13 +1,13 @@
-# PR作成前のドキュメント確認ルール
+# Documentation Update Rule
 
-PR作成前に、以下のドキュメント更新が必要か確認すること:
+Before creating a PR, check if the following documents need updating:
 
-- **CLAUDE.md**: 設定管理・CI/CD・コーディング規約・アーキテクチャに変更がある場合は更新必須
-- **README**: ユーザー向けセットアップ手順・使用方法に変更がある場合は更新必須
-- **config/**: 新しい設定項目の追加・既存設定の変更時は `base.yaml` / `dev.yaml` / `prod.yaml` を更新
+- **CLAUDE.md**: Required when changing config management, CI/CD, coding standards, or architecture
+- **README**: Required when changing user-facing setup instructions or usage
+- **config/**: Update `base.yaml` / `dev.yaml` / `prod.yaml` when adding/changing settings
 
-特に以下のケースでは必ずドキュメントを更新する:
-- 新しい環境変数の追加
-- CI/CDワークフローの追加・変更
-- 新機能の追加
-- 設定ファイルフォーマットの変更
+Always update docs when:
+- Adding new environment variables
+- Adding/changing CI/CD workflows
+- Adding new features
+- Changing config file formats

@@ -1,24 +1,24 @@
-# PRマージ前の検証ルール
+# PR Merge Checklist
 
-PRをマージする前に、以下の検証が完了していることを確認する。
-**マージはユーザーの明示的な承認を得てから行うこと。Claudeが自動的にマージしてはならない。**
+Verify the following before merging a PR.
+**Merging requires explicit user approval. Claude must NEVER auto-merge.**
 
-## 必須（全PR）
+## Required (All PRs)
 
-- CIチェック（test, lint）が全てパス
-- docker-build ジョブがパス（preview-deploy.yaml）
-- コードレビュー完了（ユーザー承認）
+- All CI checks (test, lint) pass
+- docker-build job passes (preview-deploy.yaml)
+- Code review completed (user approved)
 
-## CI/CD・インフラ変更時
+## CI/CD / Infrastructure Changes
 
-- `preview-deploy` ラベルを付与し、dev環境へのデプロイが成功
-- preview-report skillでパイプラインを実行し、PRコメントでレポートを確認
+- Add `preview-deploy` label and confirm dev deployment succeeds
+- Run preview-report skill and verify metrics in PR comment
 
-## モデル・特徴量変更時
+## Model / Feature Changes
 
-- preview-report skillでパイプラインを実行し、精度メトリクスに問題がないことを確認
-- 精度が大幅に劣化していないことをPRコメントのレポートで確認
+- Run preview-report skill and verify accuracy metrics
+- Confirm no significant accuracy degradation in PR comment report
 
-## ドキュメント
+## Documentation
 
-- CLAUDE.md / README / config の更新が必要な場合は更新済み
+- CLAUDE.md / README / config updated if needed
