@@ -13,6 +13,7 @@ Verify the following before merging a PR.
 - docker-build job passes (preview-deploy.yaml)
 - Code review completed (user approved)
 - Run review-pr skill: CRITICAL findings must be fixed before merge; WARNING/SUGGESTION findings should be addressed or filed as GitHub Issues
+- After addressing review findings, post a PR comment documenting: what was fixed (with commit SHA), what was deemed unnecessary to fix (with reason), and what was filed as Issues (with Issue numbers)
 
 ## CI/CD / Infrastructure Changes
 
