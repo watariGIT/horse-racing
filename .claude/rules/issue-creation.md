@@ -1,5 +1,6 @@
 # Issue Creation Rule
 
+- Issue title and description must be written in Japanese.
 - File discovered improvements and future work items as GitHub Issues
 - Do not include out-of-scope work in the current PR
 - Apply appropriate labels:
