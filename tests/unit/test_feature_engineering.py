@@ -494,3 +494,81 @@ class TestFeaturePipeline:
         pipeline = FeaturePipeline()
         pipeline.add_extractor(RaceFeatureExtractor())
         assert len(pipeline._extractors) == 1
+
+
+# ---------------------------------------------------------------------------
+# FeaturePipeline fit/transform boundary tests
+# ---------------------------------------------------------------------------
+
+
+class TestFeaturePipelineFitTransformBoundary:
+    """Verify that fit learns only from train data and transform uses fitted stats."""
+
+    def test_encoder_fitted_on_train_only(self):
+        """Encoder mappings must contain only categories seen in training data."""
+        train = pl.DataFrame({"course": ["Tokyo", "Kyoto"]})
+        test = pl.DataFrame({"course": ["Hanshin"]})
+
+        encoder = CategoryEncoder(columns=["course"], strategy="label")
+        pipeline = FeaturePipeline(
+            extractors=[],
+            encoder=encoder,
+        )
+        pipeline.fit(train)
+
+        # Mappings should only contain train categories
+        assert set(encoder._mappings["course"].keys()) == {"Kyoto", "Tokyo"}
+        assert "Hanshin" not in encoder._mappings["course"]
+
+        # Transforming test data should map unseen category to -1
+        result = pipeline.transform(test)
+        assert result["course_encoded"][0] == -1
+
+    def test_scaler_fitted_on_train_only(self):
+        """Scaler stats must reflect only the training data distribution."""
+        train = pl.DataFrame({"feat_val": [10.0, 20.0, 30.0]})
+
+        scaler = FeatureScaler(columns=["feat_val"], strategy="standard")
+        pipeline = FeaturePipeline(
+            extractors=[],
+            scaler=scaler,
+        )
+        pipeline.fit(train)
+
+        stats = scaler._stats["feat_val"]
+        assert stats.mean == pytest.approx(20.0)
+        # Polars std uses ddof=1 by default: std([10,20,30]) = 10.0
+        assert stats.std == pytest.approx(10.0)
+
+    def test_transform_before_fit_raises(self):
+        """Calling transform without fit must raise RuntimeError."""
+        pipeline = FeaturePipeline(
+            extractors=[],
+            encoder=CategoryEncoder(columns=["course"]),
+            scaler=FeatureScaler(columns=["feat_val"]),
+        )
+        df = pl.DataFrame({"course": ["Tokyo"], "feat_val": [1.0]})
+
+        with pytest.raises(RuntimeError):
+            pipeline.transform(df)
+
+    def test_transform_uses_fitted_stats_not_new_data(self):
+        """Scaled output must use train statistics, not test data's own stats."""
+        train = pl.DataFrame({"feat_val": [10.0, 20.0, 30.0]})
+        # Test data with a very different distribution
+        test = pl.DataFrame({"feat_val": [10.0, 100.0, 1000.0]})
+
+        scaler = FeatureScaler(columns=["feat_val"], strategy="standard")
+        pipeline = FeaturePipeline(extractors=[], scaler=scaler)
+        pipeline.fit(train)
+
+        result = pipeline.transform(test)
+        scaled = result["feat_val_scaled"].to_list()
+
+        # Train: mean=20.0, std=10.0
+        # test value 10.0 -> (10-20)/10 = -1.0
+        assert scaled[0] == pytest.approx(-1.0)
+        # test value 100.0 -> (100-20)/10 = 8.0
+        assert scaled[1] == pytest.approx(8.0)
+        # test value 1000.0 -> (1000-20)/10 = 98.0
+        assert scaled[2] == pytest.approx(98.0)
