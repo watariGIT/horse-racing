@@ -24,17 +24,22 @@ Data Import -> Feature Engineering -> Training -> Prediction -> Evaluation
 - **Workload Identity Federation**: GitHub Actions CI/CD auth
 
 ### MLflow UI
-- **Hosting**: Cloud Run Service (min-instances=0, scales to zero when idle)
+- **Hosting**: Cloud Run Service (Gen2, min-instances=0, scales to zero when idle)
+- **Backend Store**: GCS bucket mounted via Cloud Run GCS FUSE volume (`/mlruns/mlruns`)
+- **Resources**: 1 vCPU, 1Gi memory (GCS FUSE requires Gen2 + additional memory)
 - **Access**: Authenticated GCP users only (IAM `roles/run.invoker` required)
 - **Image**: `infrastructure/mlflow/Dockerfile`
 - **Deploy**: Image auto-built on `infrastructure/mlflow/**` changes via `deploy-mlflow.yaml`; Cloud Run Service managed by Terraform (`mlflow.tf`)
-- **Enable**: `mlflow_ui_enabled = true` in tfvars (default: false in prod)
+- **Artifact Store**: GCS (`gs://{project}-models/mlartifacts`) に `--serve-artifacts` でプロキシ
+- **Enable**: `mlflow_ui_enabled = true` in tfvars (dev/prod 両方有効)
 - **Cost**: ~$0 when idle (scales to zero)
-- **Access URL**: `gcloud run services describe mlflow-ui --region us-central1 --format 'value(status.url)'`
-- **Proxy access**: `gcloud run services proxy mlflow-ui --region us-central1 --port 5000`
+- **Service naming**: `mlflow-ui-{env}` (e.g., `mlflow-ui-dev`, `mlflow-ui-prod`)
+- **Access URL**: `gcloud run services describe mlflow-ui-{env} --region us-central1 --format 'value(status.url)'`
+- **Proxy access**: `gcloud run services proxy mlflow-ui-{env} --region us-central1 --port 5000`
 
 ### MLflow Experiment Tracking
-- **Tracking URI**: Local file store (dev) / GCS `gs://{project}-models/mlruns` (prod)
+- **Tracking URI**: HTTP via Cloud Run MLflow server (Cloud Run Job に `MLFLOW_TRACKING_URI` 環境変数で注入)
+- **Authentication**: `RequestHeaderProvider` プラグイン (`src/common/mlflow_auth.py`) が GCP OIDC ID トークンを自動付与
 - **Run naming**: `{model_type}_{YYYYMMDD_HHmmss}` with environment/model/feature tags
 - **Artifacts**: Feature importance (PNG/JSON), backtest results (JSON), evaluation metrics
 - **Model Registry linkage**: `mlflow_run_id` stored in GCS model metadata
@@ -59,7 +64,8 @@ src/
 ├── common/                 # Shared utilities (config, GCP clients, logging)
 │   ├── config.py           # Pydantic Settings + YAML config
 │   ├── gcp_client.py       # GCS/BigQuery client wrapper
-│   └── logging.py          # structlog setup
+│   ├── logging.py          # structlog setup
+│   └── mlflow_auth.py      # MLflow Cloud Run IAM auth plugin (RequestHeaderProvider)
 ├── data_collector/         # Data collection/import (Kaggle CSV / JRA API)
 ├── feature_engineering/    # Feature extraction pipeline
 ├── model_training/         # Model training + experiment tracking (MLflow)
@@ -81,7 +87,7 @@ Switch environments via `ENVIRONMENT` env var (`dev` / `prod`).
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `mlflow.tracking_uri` | `file:./mlruns` | MLflow tracking backend URI |
+| `mlflow.tracking_uri` | `file:./mlruns` | MLflow tracking URI (Cloud Run Job では `MLFLOW_TRACKING_URI` 環境変数で上書き) |
 | `mlflow.experiment_name` | `horse-racing-prediction` | Experiment name |
 | `mlflow.enabled` | `true` | Enable/disable MLflow tracking |
 
@@ -115,7 +121,7 @@ uv run mypy src/                        # Type check
 ### CI/CD
 
 - **On PR**: Auto-run tests (test.yaml), lint (lint.yaml), Docker build validation (preview-deploy.yaml)
-- **On PR (label)**: `preview-deploy` label triggers dev environment deployment (preview-deploy.yaml)
+- **On PR (label)**: `preview-deploy` label triggers dev environment deployment (preview-deploy.yaml) — ML pipeline + MLflow UI イメージのビルド・デプロイ
 - **On main push**: Test + lint → prod deploy to Cloud Run Jobs (deploy.yaml)
 - **On main push (mlflow)**: `infrastructure/mlflow/**` changes → MLflow UI image build+push (deploy-mlflow.yaml)
 - **Deploy method**: `docker build/push` → Artifact Registry → Cloud Run Jobs

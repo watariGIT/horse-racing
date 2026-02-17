@@ -14,11 +14,11 @@
 +----------------------------------------------------------------+
 |                        Google Cloud Platform                     |
 |                                                                  |
-|  +------------------+    +------------------+                    |
-|  | Secret Manager   |    | Cloud Run Jobs   |                    |
-|  | - jra-api-key    |    | - ml-pipeline    |                    |
-|  +--------+---------+    | (バッチ実行)      |                    |
-|           |              +----+----+----+---+                    |
+|  +------------------+    +------------------+  +------------------+|
+|  | Secret Manager   |    | Cloud Run Jobs   |  | Cloud Run Service||
+|  | - jra-api-key    |    | - ml-pipeline    |  | - mlflow-ui-{env}||
+|  +--------+---------+    | (バッチ実行)      |  | (HTTP Tracking)  ||
+|           |              +----+----+----+---+  +--------+---------+|
 |           |                   |    |    |                         |
 |           v                   |    |    |                         |
 |  +------------------+         |    |    |                         |
@@ -99,7 +99,8 @@
 3. **モデル学習** (`model_training`)
    - BigQuery `features` テーブルからデータを取得
    - LightGBM で分類/回帰モデルを学習
-   - MLflow で実験・パラメータ・メトリクスを管理
+   - MLflow HTTP Tracking Server 経由で実験・パラメータ・メトリクス・アーティファクトを記録
+   - `RequestHeaderProvider` プラグインが GCP OIDC ID トークンを自動付与（Cloud Run IAM 認証）
    - 学習済みモデルをGCS (`models` バケット) に保存
 
 4. **予測** (`predictor`)
@@ -119,7 +120,8 @@ src/
 ├── common/                     [共通基盤]
 │   ├── config.py               設定管理 (Pydantic Settings + YAML)
 │   ├── gcp_client.py           GCS/BigQueryクライアント
-│   └── logging.py              structlogロギング
+│   ├── logging.py              structlogロギング
+│   └── mlflow_auth.py          MLflow Cloud Run IAM認証プラグイン
 │
 ├── data_collector/             [データ収集]
 │   ├── client.py               JRA APIクライアント
@@ -180,6 +182,8 @@ src/
 | - 実行回数 | ~30回/月 (Free tier内) | $0/月 | $0 |
 | - CPU | ~10 CPU時間 (180,000 vCPU秒無料) | $0/月 | $0 |
 | - メモリ | 512Mi x 10時間 (360,000 GiB秒無料) | $0/月 | $0 |
+| **Cloud Run Service** | | | |
+| - MLflow UI | min-instances=0, スケールゼロ | $0/月 | ~$0 |
 | **Cloud Functions** | | | |
 | - 呼び出し | ~30回/月 (200万回無料) | $0/月 | $0 |
 | **Secret Manager** | | | |

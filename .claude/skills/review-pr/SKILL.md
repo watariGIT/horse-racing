@@ -81,6 +81,7 @@ description: Create a team of specialized reviewer agents (dynamically selected 
    - PR差分を分析し、担当ドメインの観点から問題を指摘する
    - 差分だけでは文脈が不足する場合、変更されたファイルの全体をReadツールで読む
    - 「確認すべきドキュメント」に記載されたファイルも確認し、ドキュメント更新の必要性を指摘する
+   - `references/review-exceptions.md` に記載された既知の設計判断は指摘対象外とする
    - 各指摘に深刻度を付与する:
      - **CRITICAL**: マージ前に必ず修正（セキュリティ脆弱性、データ漏洩、破壊的変更）
      - **WARNING**: 修正すべき（エラーハンドリング不足、潜在バグ、テスト不足）

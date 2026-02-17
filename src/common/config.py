@@ -119,11 +119,20 @@ def _resolve_env_vars(config: dict[str, Any]) -> dict[str, Any]:
         if isinstance(value, dict):
             result[key] = _resolve_env_vars(value)
         elif isinstance(value, str):
-            result[key] = re.sub(
-                r"\$\{(\w+)\}",
-                lambda m: os.getenv(m.group(1), m.group(0)),
-                value,
-            )
+            has_unresolved = False
+
+            def _replace(m: re.Match[str]) -> str:
+                nonlocal has_unresolved
+                env_val = os.getenv(m.group(1))
+                if env_val is None:
+                    has_unresolved = True
+                    return ""
+                return env_val
+
+            resolved = re.sub(r"\$\{(\w+)\}", _replace, value)
+            # Skip values with unresolved env vars so Pydantic defaults apply
+            if not has_unresolved:
+                result[key] = resolved
         else:
             result[key] = value
     return result

@@ -54,9 +54,41 @@ jobs:
           docker build -t "${IMAGE}" .
           docker push "${IMAGE}"
 
+      - name: Build and push MLflow UI image
+        run: |
+          IMAGE=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ml-pipeline/mlflow-ui:pr-${{ github.event.pull_request.number }}
+          docker build -t "${IMAGE}" infrastructure/mlflow/
+          docker push "${IMAGE}"
+
+      - name: Update MLflow UI service
+        run: |
+          IMAGE=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ml-pipeline/mlflow-ui:pr-${{ github.event.pull_request.number }}
+          SERVICE="mlflow-ui-dev"
+          if gcloud run services describe "${SERVICE}" --region ${{ env.GCP_REGION }} --format="value(name)" 2>/dev/null; then
+            gcloud run services update "${SERVICE}" \
+              --region ${{ env.GCP_REGION }} \
+              --image "${IMAGE}"
+          fi
+
+      - name: Get MLflow tracking URI
+        id: mlflow
+        run: |
+          MLFLOW_URI=$(gcloud run services describe mlflow-ui-dev \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_ID }} \
+            --format 'value(status.url)' 2>/dev/null || echo "")
+          echo "tracking_uri=${MLFLOW_URI}" >> "$GITHUB_OUTPUT"
+          if [ -z "${MLFLOW_URI}" ]; then
+            echo "::warning::MLflow tracking URI is empty. Experiment tracking will use local file store."
+          fi
+
       - name: Deploy to Cloud Run Jobs
         run: |
           IMAGE=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ml-pipeline/ml-pipeline:pr-${{ github.event.pull_request.number }}
+          ENV_VARS="ENVIRONMENT=dev,GCP_PROJECT_ID=${{ env.GCP_PROJECT_ID }},PIPELINE_DATA_SOURCE=bigquery"
+          if [ -n "${{ steps.mlflow.outputs.tracking_uri }}" ]; then
+            ENV_VARS="${ENV_VARS},MLFLOW_TRACKING_URI=${{ steps.mlflow.outputs.tracking_uri }}"
+          fi
           gcloud run jobs deploy ${{ env.CLOUD_RUN_JOB }} \
             --image "${IMAGE}" \
             --region ${{ env.GCP_REGION }} \
@@ -66,4 +98,4 @@ jobs:
             --max-retries 0 \
             --task-timeout 3600 \
             --service-account ${{ secrets.SERVICE_ACCOUNT }} \
-            --set-env-vars "ENVIRONMENT=dev,GCP_PROJECT_ID=${{ env.GCP_PROJECT_ID }},PIPELINE_DATA_SOURCE=bigquery"
+            --set-env-vars "${ENV_VARS}"
