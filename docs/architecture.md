@@ -180,6 +180,8 @@ src/
 | - 実行回数 | ~30回/月 (Free tier内) | $0/月 | $0 |
 | - CPU | ~10 CPU時間 (180,000 vCPU秒無料) | $0/月 | $0 |
 | - メモリ | 512Mi x 10時間 (360,000 GiB秒無料) | $0/月 | $0 |
+| **Cloud Run Service** | | | |
+| - MLflow UI | min-instances=0, スケールゼロ | $0/月 | ~$0 |
 | **Cloud Functions** | | | |
 | - 呼び出し | ~30回/月 (200万回無料) | $0/月 | $0 |
 | **Secret Manager** | | | |

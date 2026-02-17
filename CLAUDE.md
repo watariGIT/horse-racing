@@ -24,7 +24,9 @@ Data Import -> Feature Engineering -> Training -> Prediction -> Evaluation
 - **Workload Identity Federation**: GitHub Actions CI/CD auth
 
 ### MLflow UI
-- **Hosting**: Cloud Run Service (min-instances=0, scales to zero when idle)
+- **Hosting**: Cloud Run Service (Gen2, min-instances=0, scales to zero when idle)
+- **Backend Store**: GCS bucket mounted via Cloud Run GCS FUSE volume (`/mlruns/mlruns`)
+- **Resources**: 1 vCPU, 1Gi memory (GCS FUSE requires Gen2 + additional memory)
 - **Access**: Authenticated GCP users only (IAM `roles/run.invoker` required)
 - **Image**: `infrastructure/mlflow/Dockerfile`
 - **Deploy**: Image auto-built on `infrastructure/mlflow/**` changes via `deploy-mlflow.yaml`; Cloud Run Service managed by Terraform (`mlflow.tf`)

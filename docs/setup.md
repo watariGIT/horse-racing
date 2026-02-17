@@ -174,6 +174,7 @@ terraform apply \
 | GCS バケット x3 | raw-data, processed, models |
 | BigQuery データセット | horse_racing (prod) / horse_racing_dev (dev) |
 | BigQuery テーブル x3 | races_raw, features, predictions |
+| Cloud Run Service | MLflow UI (`mlflow_ui_enabled=true` の場合) |
 | Secret Manager シークレット | jra-api-key |
 | サービスアカウント | ml-pipeline-sa (10個のIAMロール付与) |
 | Workload Identity Federation | GitHub Actions用（`watariGIT/horse-racing` リポジトリに制限） |

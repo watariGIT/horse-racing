@@ -110,8 +110,9 @@ horse-racing/
 実験結果をブラウザで可視化するためのMLflow UIを Cloud Run Service でホスティングしています。
 
 - **スケールゼロ**: リクエストがない間はインスタンスが停止し、コストは ~$0
+- **GCS FUSE**: GCSバケットをボリュームマウントしてMLflowデータを直接参照（Gen2ランタイム）
 - **認証必須**: IAM `roles/run.invoker` を持つユーザーのみアクセス可能
-- **コールドスタート**: 初回アクセス時に10-30秒の起動時間あり
+- **コールドスタート**: 初回アクセス時に30-60秒の起動時間あり（GCS FUSEマウント含む）
 
 ### アクセス方法
 
@@ -165,6 +166,7 @@ uv run ruff check --fix src/ tests/
 | Cloud Storage     | ~$0.01/month  |
 | BigQuery          | Free tier     |
 | Cloud Run Jobs    | Free tier     |
+| Cloud Run Service | ~$0/month     |
 | Cloud Functions   | Free tier     |
 | Secret Manager    | Free tier     |
 

@@ -9,9 +9,19 @@ resource "google_cloud_run_v2_service" "mlflow_ui" {
   ingress  = "INGRESS_TRAFFIC_ALL"
 
   template {
+    execution_environment = "EXECUTION_ENVIRONMENT_GEN2"
+
     scaling {
       min_instance_count = 0
       max_instance_count = 1
+    }
+
+    volumes {
+      name = "mlruns"
+      gcs {
+        bucket    = "${var.project_id}-models"
+        read_only = false
+      }
     }
 
     containers {
@@ -24,13 +34,18 @@ resource "google_cloud_run_v2_service" "mlflow_ui" {
       resources {
         limits = {
           cpu    = "1"
-          memory = "512Mi"
+          memory = "1Gi"
         }
       }
 
       env {
         name  = "MLFLOW_BACKEND_STORE_URI"
-        value = "gs://${var.project_id}-models/mlruns"
+        value = "/mlruns/mlruns"
+      }
+
+      volume_mounts {
+        name       = "mlruns"
+        mount_path = "/mlruns"
       }
 
       startup_probe {
@@ -38,9 +53,10 @@ resource "google_cloud_run_v2_service" "mlflow_ui" {
           path = "/"
           port = 8080
         }
-        initial_delay_seconds = 5
+        initial_delay_seconds = 15
+        timeout_seconds       = 5
         period_seconds        = 10
-        failure_threshold     = 3
+        failure_threshold     = 10
       }
     }
 
