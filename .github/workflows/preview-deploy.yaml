@@ -57,10 +57,8 @@ jobs:
       - name: Build and push MLflow UI image
         run: |
           IMAGE=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ml-pipeline/mlflow-ui:pr-${{ github.event.pull_request.number }}
-          IMAGE_LATEST=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ml-pipeline/mlflow-ui:latest
-          docker build -t "${IMAGE}" -t "${IMAGE_LATEST}" infrastructure/mlflow/
+          docker build -t "${IMAGE}" infrastructure/mlflow/
           docker push "${IMAGE}"
-          docker push "${IMAGE_LATEST}"
 
       - name: Update MLflow UI service
         run: |

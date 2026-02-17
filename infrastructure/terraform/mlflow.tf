@@ -45,7 +45,7 @@ resource "google_cloud_run_v2_service" "mlflow_ui" {
 
       env {
         name  = "MLFLOW_ARTIFACTS_DESTINATION"
-        value = "/mlruns/mlartifacts"
+        value = "gs://${var.project_id}-models/mlartifacts"
       }
 
       volume_mounts {
