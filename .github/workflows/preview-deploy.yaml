@@ -78,6 +78,9 @@ jobs:
             --project ${{ env.GCP_PROJECT_ID }} \
             --format 'value(status.url)' 2>/dev/null || echo "")
           echo "tracking_uri=${MLFLOW_URI}" >> "$GITHUB_OUTPUT"
+          if [ -z "${MLFLOW_URI}" ]; then
+            echo "::warning::MLflow tracking URI is empty. Experiment tracking will use local file store."
+          fi
 
       - name: Deploy to Cloud Run Jobs
         run: |

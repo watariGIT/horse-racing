@@ -9,9 +9,12 @@ from __future__ import annotations
 
 import os
 
+import structlog
 from mlflow.tracking.request_header.abstract_request_header_provider import (
     RequestHeaderProvider,
 )
+
+logger = structlog.get_logger(__name__)
 
 
 class CloudRunRequestHeaderProvider(RequestHeaderProvider):
@@ -22,18 +25,25 @@ class CloudRunRequestHeaderProvider(RequestHeaderProvider):
     with the tracking URI as the audience.
     """
 
+    @property
+    def _tracking_uri(self) -> str:
+        return os.environ.get("MLFLOW_TRACKING_URI", "")
+
     def in_context(self) -> bool:
-        tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "")
-        return tracking_uri.startswith("https://")
+        return self._tracking_uri.startswith("https://")
 
     def request_headers(self) -> dict[str, str]:
-        tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "")
-        if not tracking_uri.startswith("https://"):
+        uri = self._tracking_uri
+        if not uri.startswith("https://"):
             return {}
 
-        import google.auth.transport.requests
-        import google.oauth2.id_token
+        try:
+            import google.auth.transport.requests
+            import google.oauth2.id_token
 
-        request = google.auth.transport.requests.Request()
-        token = google.oauth2.id_token.fetch_id_token(request, tracking_uri)
-        return {"Authorization": f"Bearer {token}"}
+            request = google.auth.transport.requests.Request()
+            token = google.oauth2.id_token.fetch_id_token(request, uri)
+            return {"Authorization": f"Bearer {token}"}
+        except Exception:
+            logger.warning("mlflow_auth_token_fetch_failed", tracking_uri=uri)
+            return {}

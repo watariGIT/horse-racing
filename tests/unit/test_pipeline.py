@@ -149,6 +149,9 @@ class TestPipelineOrchestrator:
         from src.common.config import get_settings
 
         get_settings.cache_clear()
+        yield
+        mlflow.set_tracking_uri("file:./mlruns")
+        get_settings.cache_clear()
 
     def test_default_data_source_is_bigquery(self) -> None:
         """Default data source should be bigquery."""

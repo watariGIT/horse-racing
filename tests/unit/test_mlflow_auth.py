@@ -45,3 +45,15 @@ class TestCloudRunRequestHeaderProvider:
             headers = provider.request_headers()
             assert headers == {"Authorization": "Bearer test-token-123"}
             mock_fetch.assert_called_once_with(mock_request_cls.return_value, uri)
+
+    @patch("google.oauth2.id_token.fetch_id_token")
+    @patch("google.auth.transport.requests.Request")
+    def test_request_headers_returns_empty_on_token_error(
+        self, mock_request_cls: MagicMock, mock_fetch: MagicMock
+    ) -> None:
+        mock_fetch.side_effect = Exception("credentials not found")
+        provider = CloudRunRequestHeaderProvider()
+        uri = "https://mlflow-ui-dev-xyz.run.app"
+        with patch.dict("os.environ", {"MLFLOW_TRACKING_URI": uri}):
+            headers = provider.request_headers()
+            assert headers == {}

@@ -35,10 +35,8 @@ jobs:
       - name: Build and push Docker image
         run: |
           IMAGE=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ml-pipeline/mlflow-ui:${{ github.sha }}
-          IMAGE_LATEST=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ml-pipeline/mlflow-ui:latest
-          docker build -t "${IMAGE}" -t "${IMAGE_LATEST}" infrastructure/mlflow/
+          docker build -t "${IMAGE}" infrastructure/mlflow/
           docker push "${IMAGE}"
-          docker push "${IMAGE_LATEST}"
 
       # NOTE: This step requires the Cloud Run services to already exist.
       # The services are created by Terraform (mlflow.tf) with mlflow_ui_enabled=true.
