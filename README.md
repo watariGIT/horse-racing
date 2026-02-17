@@ -31,8 +31,8 @@ GCP-based machine learning system for horse racing prediction. Collects and anal
 | パッケージ管理 | [uv](https://docs.astral.sh/uv/) |
 | データ処理 | Polars, Pandas |
 | 機械学習 | LightGBM, scikit-learn |
-| 実験管理 | MLflow |
-| クラウド | GCP (GCS, BigQuery, Cloud Run Jobs, Cloud Functions) |
+| 実験管理 | MLflow (UI: Cloud Run Service) |
+| クラウド | GCP (GCS, BigQuery, Cloud Run Jobs/Service, Cloud Functions) |
 | インフラ | Terraform |
 | CI/CD | GitHub Actions |
 | リンター | Ruff, Black, mypy |
@@ -103,6 +103,28 @@ horse-racing/
 │   └── architecture.md     # Architecture details
 ├── infrastructure/         # Terraform (GCP resources)
 └── .github/workflows/      # CI/CD (GitHub Actions)
+```
+
+## MLflow UI
+
+実験結果をブラウザで可視化するためのMLflow UIを Cloud Run Service でホスティングしています。
+
+- **スケールゼロ**: リクエストがない間はインスタンスが停止し、コストは ~$0
+- **認証必須**: IAM `roles/run.invoker` を持つユーザーのみアクセス可能
+- **コールドスタート**: 初回アクセス時に10-30秒の起動時間あり
+
+### アクセス方法
+
+```bash
+# Cloud Run プロキシ経由でローカルアクセス
+gcloud run services proxy mlflow-ui --region us-central1 --port 5000
+# ブラウザで http://localhost:5000 を開く
+```
+
+### 実験比較 (CLI)
+
+```bash
+uv run python -m src.model_training.compare_experiments --last 5
 ```
 
 ## Development

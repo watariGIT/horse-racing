@@ -23,6 +23,16 @@ Data Import -> Feature Engineering -> Training -> Prediction -> Evaluation
 - **Secret Manager**: API key management
 - **Workload Identity Federation**: GitHub Actions CI/CD auth
 
+### MLflow UI
+- **Hosting**: Cloud Run Service (min-instances=0, scales to zero when idle)
+- **Access**: Authenticated GCP users only (IAM `roles/run.invoker` required)
+- **Image**: `infrastructure/mlflow/Dockerfile`
+- **Deploy**: Image auto-built on `infrastructure/mlflow/**` changes via `deploy-mlflow.yaml`; Cloud Run Service managed by Terraform (`mlflow.tf`)
+- **Enable**: `mlflow_ui_enabled = true` in tfvars (default: false in prod)
+- **Cost**: ~$0 when idle (scales to zero)
+- **Access URL**: `gcloud run services describe mlflow-ui --region us-central1 --format 'value(status.url)'`
+- **Proxy access**: `gcloud run services proxy mlflow-ui --region us-central1 --port 5000`
+
 ### MLflow Experiment Tracking
 - **Tracking URI**: Local file store (dev) / GCS `gs://{project}-models/mlruns` (prod)
 - **Run naming**: `{model_type}_{YYYYMMDD_HHmmss}` with environment/model/feature tags
@@ -106,6 +116,7 @@ uv run mypy src/                        # Type check
 - **On PR**: Auto-run tests (test.yaml), lint (lint.yaml), Docker build validation (preview-deploy.yaml)
 - **On PR (label)**: `preview-deploy` label triggers dev environment deployment (preview-deploy.yaml)
 - **On main push**: Test + lint → prod deploy to Cloud Run Jobs (deploy.yaml)
+- **On main push (mlflow)**: `infrastructure/mlflow/**` changes → MLflow UI image build+push (deploy-mlflow.yaml)
 - **Deploy method**: `docker build/push` → Artifact Registry → Cloud Run Jobs
 - **Auth**: Workload Identity Federation (scoped to `watariGIT/horse-racing`)
 

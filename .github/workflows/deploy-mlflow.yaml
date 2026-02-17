@@ -1,0 +1,50 @@
+name: Deploy MLflow UI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infrastructure/mlflow/**"
+
+env:
+  GCP_REGION: us-central1
+  GCP_PROJECT_ID: horse-racing-ml-dev
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+
+      - name: Build and push Docker image
+        run: |
+          IMAGE=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ml-pipeline/mlflow-ui:${{ github.sha }}
+          IMAGE_LATEST=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ml-pipeline/mlflow-ui:latest
+          docker build -t "${IMAGE}" -t "${IMAGE_LATEST}" infrastructure/mlflow/
+          docker push "${IMAGE}"
+          docker push "${IMAGE_LATEST}"
+
+      # NOTE: This step requires the Cloud Run service to already exist.
+      # The service is created by Terraform (mlflow.tf) with mlflow_ui_enabled=true.
+      # Run `terraform apply` before the first execution of this workflow.
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run services update mlflow-ui \
+            --region ${{ env.GCP_REGION }} \
+            --image "${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ml-pipeline/mlflow-ui:${{ github.sha }}"
