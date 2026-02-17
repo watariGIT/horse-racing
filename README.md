@@ -117,8 +117,8 @@ horse-racing/
 ### アクセス方法
 
 ```bash
-# Cloud Run プロキシ経由でローカルアクセス
-gcloud run services proxy mlflow-ui --region us-central1 --port 5000
+# Cloud Run プロキシ経由でローカルアクセス（{env} = dev or prod）
+gcloud run services proxy mlflow-ui-{env} --region us-central1 --port 5000
 # ブラウザで http://localhost:5000 を開く
 ```
 

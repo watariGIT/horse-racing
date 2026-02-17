@@ -32,8 +32,9 @@ Data Import -> Feature Engineering -> Training -> Prediction -> Evaluation
 - **Deploy**: Image auto-built on `infrastructure/mlflow/**` changes via `deploy-mlflow.yaml`; Cloud Run Service managed by Terraform (`mlflow.tf`)
 - **Enable**: `mlflow_ui_enabled = true` in tfvars (default: false in prod)
 - **Cost**: ~$0 when idle (scales to zero)
-- **Access URL**: `gcloud run services describe mlflow-ui --region us-central1 --format 'value(status.url)'`
-- **Proxy access**: `gcloud run services proxy mlflow-ui --region us-central1 --port 5000`
+- **Service naming**: `mlflow-ui-{env}` (e.g., `mlflow-ui-dev`, `mlflow-ui-prod`)
+- **Access URL**: `gcloud run services describe mlflow-ui-{env} --region us-central1 --format 'value(status.url)'`
+- **Proxy access**: `gcloud run services proxy mlflow-ui-{env} --region us-central1 --port 5000`
 
 ### MLflow Experiment Tracking
 - **Tracking URI**: Local file store (dev) / GCS `gs://{project}-models/mlruns` (prod)

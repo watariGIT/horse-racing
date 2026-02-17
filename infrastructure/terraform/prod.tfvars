@@ -1,2 +1,2 @@
 project_id        = "horse-racing-ml-dev"
-mlflow_ui_enabled = false
+mlflow_ui_enabled = true
