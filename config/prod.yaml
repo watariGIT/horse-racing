@@ -6,6 +6,9 @@ gcp:
 bigquery:
   dataset: horse_racing
 
+mlflow:
+  tracking_uri: "gs://${GCP_PROJECT_ID}-models/mlruns"
+
 logging:
   level: INFO
   format: json

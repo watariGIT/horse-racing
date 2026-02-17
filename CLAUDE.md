@@ -23,6 +23,13 @@ Data Import -> Feature Engineering -> Training -> Prediction -> Evaluation
 - **Secret Manager**: API key management
 - **Workload Identity Federation**: GitHub Actions CI/CD auth
 
+### MLflow Experiment Tracking
+- **Tracking URI**: Local file store (dev) / GCS `gs://{project}-models/mlruns` (prod)
+- **Run naming**: `{model_type}_{YYYYMMDD_HHmmss}` with environment/model/feature tags
+- **Artifacts**: Feature importance (PNG/JSON), backtest results (JSON)
+- **Model Registry linkage**: `mlflow_run_id` stored in GCS model metadata
+- **Comparison**: `uv run python -m src.model_training.compare_experiments --last 5`
+
 ## Tech Stack
 
 - **Language**: Python 3.10+
@@ -58,6 +65,14 @@ Config loading priority (later overrides earlier):
 4. Environment variables
 
 Switch environments via `ENVIRONMENT` env var (`dev` / `prod`).
+
+### MLflow Settings
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `mlflow.tracking_uri` | `file:./mlruns` | MLflow tracking backend URI |
+| `mlflow.experiment_name` | `horse-racing-prediction` | Experiment name |
+| `mlflow.enabled` | `true` | Enable/disable MLflow tracking |
 
 ## Development
 

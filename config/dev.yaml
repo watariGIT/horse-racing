@@ -6,6 +6,9 @@ gcp:
 bigquery:
   dataset: horse_racing_dev
 
+mlflow:
+  tracking_uri: "file:./mlruns"
+
 logging:
   level: DEBUG
   format: text
