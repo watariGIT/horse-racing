@@ -247,13 +247,13 @@ class TestPipelineCLI:
     """Tests for __main__.py argument parsing."""
 
     def test_parse_default_args(self) -> None:
-        """Default args should set stage=full."""
+        """Default args should set stage=full with None for window params."""
         from src.pipeline.__main__ import _parse_args
 
         args = _parse_args([])
         assert args.stage == "full"
-        assert args.train_window == 365
-        assert args.test_window == 30
+        assert args.train_window is None
+        assert args.test_window is None
         assert args.model_name == "win_classifier"
 
     def test_parse_custom_args(self) -> None:

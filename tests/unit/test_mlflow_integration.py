@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from src.common.config import MLflowConfig
+from src.common.config import BacktestConfig, MLflowConfig
 from src.model_training.experiment_tracker import ExperimentTracker
 
 # ---------------------------------------------------------------------------
@@ -215,6 +215,7 @@ class TestOrchestratorMLflowIntegration:
                 ),
                 environment=MagicMock(value="dev"),
                 model=MagicMock(feature_version="v1"),
+                backtest=BacktestConfig(),
                 gcs=MagicMock(bucket_processed="", bucket_models=""),
                 bigquery=MagicMock(dataset="test"),
                 gcp=MagicMock(project_id="test"),
@@ -230,6 +231,7 @@ class TestOrchestratorMLflowIntegration:
             mlflow=MLflowConfig(enabled=False),
             environment=MagicMock(value="dev"),
             model=MagicMock(feature_version="v1"),
+            backtest=BacktestConfig(),
             gcs=MagicMock(bucket_processed="", bucket_models=""),
             bigquery=MagicMock(dataset="test"),
             gcp=MagicMock(project_id="test"),

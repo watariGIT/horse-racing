@@ -58,6 +58,12 @@ class MLflowConfig(BaseModel):
     enabled: bool = True
 
 
+class BacktestConfig(BaseModel):
+    train_window_days: int = 365
+    test_window_days: int = 30
+    step_days: int = 30
+
+
 class ModelConfig(BaseModel):
     default_type: str = "lgbm_classifier"
     feature_version: str = "v1"
@@ -88,6 +94,7 @@ class AppSettings(BaseSettings):
     cloud_run: CloudRunConfig = Field(default_factory=CloudRunConfig)
     kaggle: KaggleConfig = Field(default_factory=KaggleConfig)
     model: ModelConfig = Field(default_factory=ModelConfig)
+    backtest: BacktestConfig = Field(default_factory=BacktestConfig)
     mlflow: MLflowConfig = Field(default_factory=MLflowConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
