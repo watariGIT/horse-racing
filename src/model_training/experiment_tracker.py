@@ -6,12 +6,18 @@ including parameters, metrics, and model artifacts.
 
 from __future__ import annotations
 
+import json
+import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import mlflow
 
 from src.common.logging import get_logger
+
+if TYPE_CHECKING:
+    from src.common.config import MLflowConfig
 
 logger = get_logger(__name__)
 
@@ -20,7 +26,7 @@ class ExperimentTracker:
     """MLflow-based experiment tracker.
 
     Manages experiment lifecycle: start, log, and end runs.
-    Uses local file store by default.
+    Supports local file store and GCS backends.
 
     Args:
         experiment_name: MLflow experiment name.
@@ -39,6 +45,36 @@ class ExperimentTracker:
 
         mlflow.set_tracking_uri(self._tracking_uri)
         mlflow.set_experiment(self._experiment_name)
+
+    @classmethod
+    def from_config(cls, config: MLflowConfig) -> ExperimentTracker:
+        """Create a tracker from MLflowConfig.
+
+        Args:
+            config: MLflow configuration object.
+
+        Returns:
+            Configured ExperimentTracker instance.
+        """
+        return cls(
+            experiment_name=config.experiment_name,
+            tracking_uri=config.tracking_uri,
+        )
+
+    @staticmethod
+    def generate_run_name(model_type: str) -> str:
+        """Generate a run name with timestamp.
+
+        Format: ``{model_type}_{YYYYMMDD_HHmmss}``
+
+        Args:
+            model_type: Model type identifier.
+
+        Returns:
+            Generated run name string.
+        """
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        return f"{model_type}_{ts}"
 
     @property
     def is_active(self) -> bool:
@@ -114,6 +150,15 @@ class ExperimentTracker:
         if self._run is not None:
             mlflow.log_metrics(metrics, step=step)
 
+    def set_tags(self, tags: dict[str, str]) -> None:
+        """Set multiple tags on the active run.
+
+        Args:
+            tags: Dict of tag name -> value.
+        """
+        if self._run is not None:
+            mlflow.set_tags(tags)
+
     def log_artifact(self, local_path: str | Path) -> None:
         """Log a local file as an artifact.
 
@@ -135,6 +180,42 @@ class ExperimentTracker:
         """
         if self._run is not None:
             mlflow.log_artifact(str(model_path), artifact_path=artifact_name)
+
+    def log_dict_artifact(self, data: dict[str, Any], filename: str) -> None:
+        """Log a dictionary as a JSON artifact.
+
+        Args:
+            data: Dictionary to serialize and log.
+            filename: Name for the artifact file.
+        """
+        if self._run is None:
+            return
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(data, f, indent=2, default=str)
+            temp_path = Path(f.name)
+        try:
+            mlflow.log_artifact(str(temp_path))
+            logger.info("Dict artifact logged", filename=filename)
+        finally:
+            temp_path.unlink(missing_ok=True)
+
+    def log_figure(self, fig: Any, filename: str) -> None:
+        """Log a matplotlib figure as a PNG artifact.
+
+        Args:
+            fig: Matplotlib figure object.
+            filename: Name for the artifact file.
+        """
+        if self._run is None:
+            return
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
+            temp_path = Path(f.name)
+        try:
+            fig.savefig(str(temp_path), dpi=100, bbox_inches="tight")
+            mlflow.log_artifact(str(temp_path))
+            logger.info("Figure artifact logged", filename=filename)
+        finally:
+            temp_path.unlink(missing_ok=True)
 
     def __enter__(self) -> ExperimentTracker:
         self.start_run()

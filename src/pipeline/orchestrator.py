@@ -20,6 +20,7 @@ from src.evaluator.reporter import Reporter
 from src.feature_engineering.extractors.horse_features import HorseFeatureExtractor
 from src.feature_engineering.extractors.race_features import RaceFeatureExtractor
 from src.feature_engineering.pipeline import FeaturePipeline
+from src.model_training.experiment_tracker import ExperimentTracker
 from src.model_training.models.lgbm_classifier import LGBMClassifierModel
 from src.model_training.trainer import ModelTrainer
 from src.pipeline.data_preparer import DataPreparer
@@ -83,6 +84,11 @@ class PipelineOrchestrator:
         self._backtest_result: BacktestResult | None = None
         self._report_content: str = ""
 
+        # MLflow tracking
+        self._tracker: ExperimentTracker | None = None
+        if self._settings.mlflow.enabled:
+            self._tracker = ExperimentTracker.from_config(self._settings.mlflow)
+
     def run_full(self) -> dict[str, Any]:
         """Execute the full pipeline end-to-end.
 
@@ -125,14 +131,7 @@ class PipelineOrchestrator:
         return self._raw_df
 
     def prepare_features(self) -> pl.DataFrame:
-        """Run history aggregation and feature extraction.
-
-        Returns:
-            DataFrame with all features and targets.
-
-        Raises:
-            RuntimeError: If import_data has not been called.
-        """
+        """Run history aggregation and feature extraction."""
         if self._raw_df is None:
             raise RuntimeError("import_data() must be called first")
 
@@ -180,7 +179,29 @@ class PipelineOrchestrator:
             race_dates = self._feature_df["race_date"].to_pandas()
 
         self._model = LGBMClassifierModel()
-        trainer = ModelTrainer()
+
+        if self._tracker:
+            run_name = ExperimentTracker.generate_run_name(self._model.model_type)
+            self._tracker.start_run(run_name=run_name)
+            self._tracker.set_tags(
+                {
+                    "environment": self._settings.environment.value,
+                    "model_type": self._model.model_type,
+                    "feature_version": self._settings.model.feature_version,
+                    "date_from": self._date_from or "",
+                    "date_to": self._date_to or "",
+                }
+            )
+            self._tracker.log_params(
+                {
+                    "n_samples": len(X),
+                    "n_features": len(feature_cols),
+                    "date_from": self._date_from or "",
+                    "date_to": self._date_to or "",
+                }
+            )
+
+        trainer = ModelTrainer(tracker=self._tracker)
 
         train_result = trainer.train(
             model=self._model,
@@ -197,6 +218,8 @@ class PipelineOrchestrator:
             y=y,
             n_splits=5,
         )
+
+        self._log_training_to_mlflow(feature_cols)
 
         logger.info(
             "Training complete",
@@ -250,6 +273,8 @@ class PipelineOrchestrator:
         )
         self._report_content = reporter.generate_backtest_report(self._backtest_result)
 
+        self._log_backtest_to_mlflow()
+
         logger.info(
             "Evaluation complete",
             n_periods=len(self._backtest_result.periods),
@@ -258,17 +283,7 @@ class PipelineOrchestrator:
         return self._backtest_result
 
     def save_results(self) -> dict[str, Any]:
-        """Persist model, reports, and metrics to GCS/BigQuery.
-
-        Saves:
-            - Trained model to ModelRegistry (GCS)
-            - Backtest report markdown to GCS
-            - Feature importances JSON to GCS
-            - Evaluation metrics to BigQuery
-
-        Returns:
-            Dict with saved artifact paths and summary.
-        """
+        """Persist model, reports, and metrics to GCS/BigQuery."""
         if self._backtest_result is None:
             raise RuntimeError("evaluate_model() must be called first")
 
@@ -291,14 +306,13 @@ class PipelineOrchestrator:
             logger.warning("GCP save failed (non-fatal)", error=str(e))
             result["gcp_save_error"] = str(e)
 
+        if self._tracker:
+            self._tracker.end_run()
+
         return result
 
     def _save_to_gcp(self) -> dict[str, str]:
-        """Upload artifacts to GCS and BigQuery.
-
-        Returns:
-            Dict of artifact type to GCS URI or table ID.
-        """
+        """Upload artifacts to GCS and BigQuery."""
         from src.common.gcp_client import BigQueryClient, GCSClient
         from src.model_training.model_registry import ModelRegistry
 
@@ -308,10 +322,14 @@ class PipelineOrchestrator:
         # Save model
         if self._model is not None:
             registry = ModelRegistry(gcs_client=gcs)
+            extra_metadata: dict[str, Any] = {}
+            if self._tracker and self._tracker.run_id:
+                extra_metadata["mlflow_run_id"] = self._tracker.run_id
             version = registry.save_model(
                 model=self._model,
                 model_name=self._model_name,
                 metrics=self._train_metrics,
+                extra_metadata=extra_metadata or None,
             )
             saved["model_version"] = version
 
@@ -363,12 +381,88 @@ class PipelineOrchestrator:
 
         return saved
 
-    def _load_from_bigquery(self) -> pl.DataFrame:
-        """Load raw data from BigQuery horse_results_raw table.
+    def _log_training_to_mlflow(self, feature_cols: list[str]) -> None:
+        """Log feature importances and chart to MLflow."""
+        if not self._tracker or self._model is None or not self._model.is_fitted:
+            return
 
-        Returns:
-            Polars DataFrame of race results.
-        """
+        try:
+            importances = self._model.feature_importances
+            importance_data = dict(zip(feature_cols, importances.tolist()))
+            self._tracker.log_dict_artifact(importance_data, "feature_importances.json")
+        except RuntimeError:
+            logger.debug("Feature importances not available for MLflow")
+            return
+
+        try:
+            import matplotlib
+
+            matplotlib.use("Agg")
+            import matplotlib.pyplot as plt
+
+            sorted_pairs = sorted(
+                importance_data.items(), key=lambda x: x[1], reverse=True
+            )[:20]
+            names = [p[0] for p in sorted_pairs]
+            values = [p[1] for p in sorted_pairs]
+
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.barh(names[::-1], values[::-1])
+            ax.set_xlabel("Importance")
+            ax.set_title("Top 20 Feature Importances")
+            fig.tight_layout()
+
+            self._tracker.log_figure(fig, "feature_importances.png")
+            plt.close(fig)
+        except ImportError:
+            logger.debug("matplotlib not available, skipping chart")
+
+    def _log_backtest_to_mlflow(self) -> None:
+        """Log backtest results to MLflow."""
+        if not self._tracker or self._backtest_result is None:
+            return
+
+        for period in self._backtest_result.periods:
+            pm = {
+                f"backtest_{k}": v
+                for k, v in period.metrics.to_dict().items()
+                if isinstance(v, (int, float))
+            }
+            self._tracker.log_metrics(pm, step=period.period_index)
+
+        overall = self._backtest_result.overall_metrics.to_dict()
+        self._tracker.log_metrics(
+            {
+                f"backtest_overall_{k}": v
+                for k, v in overall.items()
+                if isinstance(v, (int, float))
+            },
+        )
+        self._tracker.log_params(
+            {
+                "backtest_train_window": self._train_window,
+                "backtest_test_window": self._test_window,
+                "backtest_n_periods": len(self._backtest_result.periods),
+            }
+        )
+        self._tracker.log_dict_artifact(
+            {
+                "overall_metrics": overall,
+                "periods": [
+                    {
+                        "period": p.period_index,
+                        "test_range": f"{p.test_start} - {p.test_end}",
+                        "n_test": p.n_test,
+                        "metrics": p.metrics.to_dict(),
+                    }
+                    for p in self._backtest_result.periods
+                ],
+            },
+            "backtest_results.json",
+        )
+
+    def _load_from_bigquery(self) -> pl.DataFrame:
+        """Load raw data from BigQuery horse_results_raw table."""
         from src.common.gcp_client import BigQueryClient
 
         bq = BigQueryClient()
@@ -393,11 +487,7 @@ class PipelineOrchestrator:
         return pl.from_pandas(pandas_df)
 
     def _load_from_csv(self) -> pl.DataFrame:
-        """Load raw data from Kaggle CSV files.
-
-        Returns:
-            Polars DataFrame of race results.
-        """
+        """Load raw data from Kaggle CSV files."""
         from src.data_collector.kaggle_loader import KaggleDataLoader
 
         loader = KaggleDataLoader()

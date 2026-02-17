@@ -52,6 +52,12 @@ class KaggleConfig(BaseModel):
     race_result_file: str = "race_result.csv"
 
 
+class MLflowConfig(BaseModel):
+    tracking_uri: str = "file:./mlruns"
+    experiment_name: str = "horse-racing-prediction"
+    enabled: bool = True
+
+
 class ModelConfig(BaseModel):
     default_type: str = "lgbm_classifier"
     feature_version: str = "v1"
@@ -82,6 +88,7 @@ class AppSettings(BaseSettings):
     cloud_run: CloudRunConfig = Field(default_factory=CloudRunConfig)
     kaggle: KaggleConfig = Field(default_factory=KaggleConfig)
     model: ModelConfig = Field(default_factory=ModelConfig)
+    mlflow: MLflowConfig = Field(default_factory=MLflowConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
 
