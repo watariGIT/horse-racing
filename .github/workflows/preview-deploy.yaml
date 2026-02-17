@@ -54,6 +54,24 @@ jobs:
           docker build -t "${IMAGE}" .
           docker push "${IMAGE}"
 
+      - name: Build and push MLflow UI image
+        run: |
+          IMAGE=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ml-pipeline/mlflow-ui:pr-${{ github.event.pull_request.number }}
+          IMAGE_LATEST=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ml-pipeline/mlflow-ui:latest
+          docker build -t "${IMAGE}" -t "${IMAGE_LATEST}" infrastructure/mlflow/
+          docker push "${IMAGE}"
+          docker push "${IMAGE_LATEST}"
+
+      - name: Update MLflow UI service
+        run: |
+          IMAGE=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ml-pipeline/mlflow-ui:pr-${{ github.event.pull_request.number }}
+          SERVICE="mlflow-ui-dev"
+          if gcloud run services describe "${SERVICE}" --region ${{ env.GCP_REGION }} --format="value(name)" 2>/dev/null; then
+            gcloud run services update "${SERVICE}" \
+              --region ${{ env.GCP_REGION }} \
+              --image "${IMAGE}"
+          fi
+
       - name: Get MLflow tracking URI
         id: mlflow
         run: |
