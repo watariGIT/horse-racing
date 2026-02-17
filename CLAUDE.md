@@ -37,7 +37,7 @@ Data Import -> Feature Engineering -> Training -> Prediction -> Evaluation
 - **Proxy access**: `gcloud run services proxy mlflow-ui-{env} --region us-central1 --port 5000`
 
 ### MLflow Experiment Tracking
-- **Tracking URI**: Local file store (dev) / GCS `gs://{project}-models/mlruns` (prod)
+- **Tracking URI**: GCS `gs://{project}-models/mlruns` (dev/prod shared)
 - **Run naming**: `{model_type}_{YYYYMMDD_HHmmss}` with environment/model/feature tags
 - **Artifacts**: Feature importance (PNG/JSON), backtest results (JSON), evaluation metrics
 - **Model Registry linkage**: `mlflow_run_id` stored in GCS model metadata
