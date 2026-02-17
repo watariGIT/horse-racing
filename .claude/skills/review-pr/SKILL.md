@@ -30,6 +30,8 @@ description: Create a team of specialized reviewer agents (dynamically selected 
    | `src/feature_engineering/**`, `src/model_training/**`, `src/evaluator/**`, `src/predictor/**` | data-ml |
    | `infrastructure/terraform/**`, `.github/workflows/**`, `Dockerfile*`, `infrastructure/mlflow/**` | infrastructure |
    | `config/**` | architecture |
+   | `pyproject.toml`, `uv.lock`, `*.yaml`, `*.toml`, `*.json`（config/以外） | engineering |
+   | `.claude/**`（スキル定義、ルール等） | engineering |
    | `.md` ファイルのみ（他のファイル種別なし） | engineering のみ |
 
    ルール:
@@ -53,6 +55,8 @@ description: Create a team of specialized reviewer agents (dynamically selected 
 
    if any file matches config/**:
        reviewers.add("architecture")
+
+   # pyproject.toml, uv.lock, .claude/** 等はengineeringのみ（既に含まれている）
 
    # 特殊ケース: .md ファイルのみの場合
    if all changed files end with .md:
