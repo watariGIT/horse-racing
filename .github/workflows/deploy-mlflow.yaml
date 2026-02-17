@@ -39,3 +39,9 @@ jobs:
           docker build -t "${IMAGE}" -t "${IMAGE_LATEST}" infrastructure/mlflow/
           docker push "${IMAGE}"
           docker push "${IMAGE_LATEST}"
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run services update mlflow-ui \
+            --region ${{ env.GCP_REGION }} \
+            --image "${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ml-pipeline/mlflow-ui:${{ github.sha }}"
