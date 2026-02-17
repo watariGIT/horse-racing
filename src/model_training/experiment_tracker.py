@@ -190,14 +190,11 @@ class ExperimentTracker:
         """
         if self._run is None:
             return
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump(data, f, indent=2, default=str)
-            temp_path = Path(f.name)
-        try:
-            mlflow.log_artifact(str(temp_path))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            artifact_path = Path(tmpdir) / filename
+            artifact_path.write_text(json.dumps(data, indent=2, default=str))
+            mlflow.log_artifact(str(artifact_path))
             logger.info("Dict artifact logged", filename=filename)
-        finally:
-            temp_path.unlink(missing_ok=True)
 
     def log_figure(self, fig: Any, filename: str) -> None:
         """Log a matplotlib figure as a PNG artifact.
@@ -208,14 +205,11 @@ class ExperimentTracker:
         """
         if self._run is None:
             return
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
-            temp_path = Path(f.name)
-        try:
-            fig.savefig(str(temp_path), dpi=100, bbox_inches="tight")
-            mlflow.log_artifact(str(temp_path))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            artifact_path = Path(tmpdir) / filename
+            fig.savefig(str(artifact_path), dpi=100, bbox_inches="tight")
+            mlflow.log_artifact(str(artifact_path))
             logger.info("Figure artifact logged", filename=filename)
-        finally:
-            temp_path.unlink(missing_ok=True)
 
     def __enter__(self) -> ExperimentTracker:
         self.start_run()
