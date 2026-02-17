@@ -7,6 +7,7 @@
 | Cloud Storage | ~$0.20/mo | Nearline lifecycle transition (90 days) |
 | BigQuery | ~$0.50/mo | On-demand billing, <10GB |
 | Cloud Run Jobs | Free tier | 2M requests/month free |
+| Cloud Run Service (MLflow UI) | ~$0/mo | min-instances=0, scales to zero when idle |
 | Cloud Functions | Free tier | 2M invocations/month free |
 | Secret Manager | Free tier | 10,000 accesses/month free |
 
