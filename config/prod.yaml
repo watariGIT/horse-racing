@@ -7,7 +7,7 @@ bigquery:
   dataset: horse_racing
 
 mlflow:
-  tracking_uri: "gs://${GCP_PROJECT_ID}-models/mlruns"
+  tracking_uri: "${MLFLOW_TRACKING_URI}"
 
 logging:
   level: INFO

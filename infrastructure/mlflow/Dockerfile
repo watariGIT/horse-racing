@@ -12,5 +12,6 @@ EXPOSE ${PORT}
 
 CMD exec mlflow server \
     --backend-store-uri "${MLFLOW_BACKEND_STORE_URI}" \
+    --serve-artifacts \
     --host 0.0.0.0 \
     --port ${PORT}

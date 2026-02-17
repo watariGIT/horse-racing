@@ -37,7 +37,8 @@ Data Import -> Feature Engineering -> Training -> Prediction -> Evaluation
 - **Proxy access**: `gcloud run services proxy mlflow-ui-{env} --region us-central1 --port 5000`
 
 ### MLflow Experiment Tracking
-- **Tracking URI**: GCS `gs://{project}-models/mlruns` (dev/prod shared)
+- **Tracking URI**: HTTP via Cloud Run MLflow server (Cloud Run Job に `MLFLOW_TRACKING_URI` 環境変数で注入)
+- **Authentication**: `RequestHeaderProvider` プラグイン (`src/common/mlflow_auth.py`) が GCP OIDC ID トークンを自動付与
 - **Run naming**: `{model_type}_{YYYYMMDD_HHmmss}` with environment/model/feature tags
 - **Artifacts**: Feature importance (PNG/JSON), backtest results (JSON), evaluation metrics
 - **Model Registry linkage**: `mlflow_run_id` stored in GCS model metadata
@@ -84,7 +85,7 @@ Switch environments via `ENVIRONMENT` env var (`dev` / `prod`).
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `mlflow.tracking_uri` | `file:./mlruns` | MLflow tracking backend URI |
+| `mlflow.tracking_uri` | `file:./mlruns` | MLflow tracking URI (Cloud Run Job では `MLFLOW_TRACKING_URI` 環境変数で上書き) |
 | `mlflow.experiment_name` | `horse-racing-prediction` | Experiment name |
 | `mlflow.enabled` | `true` | Enable/disable MLflow tracking |
 
