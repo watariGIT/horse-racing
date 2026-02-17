@@ -1,76 +1,66 @@
-# Import Data Skill
+---
+name: import-data
+description: Download Kaggle JRA horse racing dataset and import into BigQuery. Use when the user wants to import or re-import race data, update BigQuery tables, or set up data for the first time.
+---
 
-Kaggle データセットをダウンロードし、BigQuery にインポートする。
+# Import Data
 
-## 前提条件
+## Prerequisites
 
-- `kaggle` CLIが設定済みであること（`~/.kaggle/kaggle.json`）
-- `gcloud` CLIでGCP認証済みであること（`gcloud auth application-default login`）
-- `uv` がインストール済みであること
-- Terraformでデータセット・テーブルが作成済みであること
+- `kaggle` CLI configured (`~/.kaggle/kaggle.json`)
+- `gcloud` CLI authenticated (`gcloud auth application-default login`)
+- `uv` installed
+- Terraform datasets/tables created
 
-## 手順
+## Workflow
 
-1. **Kaggle データダウンロード**: CSVファイルをダウンロードして展開する
+1. **Download Kaggle CSV**
    ```bash
    kaggle datasets download -d takamotoki/jra-horse-racing-dataset -p data/raw/kaggle/ --unzip
    ```
 
-2. **ドライラン（検証のみ）**: データの読み込みとバリデーションのみ実行し、ストレージには保存しない
+2. **Dry run (validation only)**: Validate data without saving to storage
    ```bash
    uv run python -m src.data_collector --source kaggle --dry-run
    ```
-   - エラーがないことを確認してから本番インポートに進む
+   Confirm no errors before proceeding.
 
-3. **BigQuery インポート実行**: データをBigQueryとGCSに保存する
+3. **Import to BigQuery**
    ```bash
-   # prod環境: 全データをインポート
+   # prod: All data
    ENVIRONMENT=prod GCP_PROJECT_ID=horse-racing-ml-dev \
      uv run python -m src.data_collector --source kaggle
 
-   # prod環境: 直近10年のみインポート（推奨）
+   # prod: Last 10 years (recommended)
    ENVIRONMENT=prod GCP_PROJECT_ID=horse-racing-ml-dev \
      uv run python -m src.data_collector --source kaggle --date-from 2012-01-01
 
-   # dev環境: インポート
+   # dev
    ENVIRONMENT=dev GCP_PROJECT_ID=horse-racing-ml-dev \
      uv run python -m src.data_collector --source kaggle
    ```
-   - `GCP_PROJECT_ID` 環境変数の設定が必須（config/prod.yaml で参照）
-   - `ENVIRONMENT` で対象データセットを切り替え
+   - `GCP_PROJECT_ID` is required (referenced in config/prod.yaml)
+   - `ENVIRONMENT` switches the target dataset
 
-4. **インポート結果確認**: BigQueryでデータ件数を確認する
+4. **Verify import**: Check row counts in BigQuery
    ```bash
-   # prod環境
-   uv run python -c "
-   from google.cloud import bigquery
-   client = bigquery.Client(project='horse-racing-ml-dev')
-   result = client.query('SELECT COUNT(*) as cnt FROM horse_racing.horse_results_raw').result()
-   for row in result: print(f'horse_results_raw: {row.cnt} rows')
-   "
-
-   # dev環境
-   uv run python -c "
-   from google.cloud import bigquery
-   client = bigquery.Client(project='horse-racing-ml-dev')
-   result = client.query('SELECT COUNT(*) as cnt FROM horse_racing_dev.horse_results_raw').result()
-   for row in result: print(f'horse_results_raw: {row.cnt} rows')
-   "
+   uv run python .claude/skills/import-data/scripts/verify_import.py --env prod
+   uv run python .claude/skills/import-data/scripts/verify_import.py --env dev
    ```
 
-## 環境の切り替え
+## Environments
 
-| 環境 | 環境変数 | BigQueryデータセット |
-|------|---------|---------------------|
-| prod | `ENVIRONMENT=prod`（デフォルト） | `horse_racing` |
+| Env | Environment Variable | BigQuery Dataset |
+|-----|---------------------|-----------------|
+| prod | `ENVIRONMENT=prod` | `horse_racing` |
 | dev | `ENVIRONMENT=dev` | `horse_racing_dev` |
 
-**注意**: パイプライン実行時のデフォルトデータソースは `bigquery` です。インポート完了後はそのまま `uv run python -m src.pipeline` でBigQueryからデータを読み込みます。
+After import, the pipeline reads from BigQuery by default (`uv run python -m src.pipeline`).
 
-## インポートされるテーブル
+## Imported Tables
 
-| テーブル名 | 内容 | パーティション |
-|-----------|------|--------------|
-| `races_raw` | レース情報（1レース1行） | `race_date` |
-| `horse_results_raw` | 馬ごとのレース結果 | `race_date` |
-| `jockey_results_raw` | 騎手ごとのレース結果 | `race_date` |
+| Table | Content | Partition |
+|-------|---------|-----------|
+| `races_raw` | Race info (1 row per race) | `race_date` |
+| `horse_results_raw` | Per-horse race results | `race_date` |
+| `jockey_results_raw` | Per-jockey race results | `race_date` |

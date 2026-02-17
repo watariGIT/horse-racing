@@ -1,42 +1,45 @@
-# Run Pipeline Skill
+---
+name: run-pipeline
+description: Execute the prod environment ML pipeline Cloud Run Job and display backtest results. Use when the user wants to run the full ML pipeline in production, check model performance, or generate a backtest report.
+---
 
-prod環境の `ml-pipeline` Cloud Run Job を実行し、バックテストレポートを表示する。
+# Run Pipeline
 
-## 前提条件
+## Prerequisites
 
-- `gcloud` CLIでGCP認証済みであること
-- BigQueryデータセット `horse_racing` にデータがインポート済みであること（`import-data` skill参照）
+- `gcloud` CLI authenticated
+- BigQuery dataset `horse_racing` has imported data (see `import-data` skill)
 
-## 手順
+## Workflow
 
-1. **パイプライン実行**: 以下のコマンドでCloud Run Jobを実行し完了を待機する
+1. **Execute Cloud Run Job**
    ```bash
-   # デフォルト（BigQueryから直近5年分のデータを使用）
+   # Default (last 5 years from BigQuery)
    gcloud run jobs execute ml-pipeline \
      --region us-central1 \
      --project horse-racing-ml-dev \
      --wait
 
-   # 日付範囲を指定して実行
+   # Custom date range (overrides entire CMD)
    gcloud run jobs execute ml-pipeline \
      --region us-central1 \
      --project horse-racing-ml-dev \
      --args="uv,run,python,-m,src.pipeline,--stage,full,--date-from,2012-01-01" \
      --wait
    ```
-   - デフォルトではBigQueryから直近5年分（2016-08-01〜2021-07-31）のデータを使用
-   - `--args` を使用する場合は `uv,run,python,-m,src.pipeline` から全て指定する（CMD をオーバーライドするため）
+   - Default: uses last 5 years (2016-08-01 to 2021-07-31)
+   - With `--args`: specify full command from `uv,run,python,...` (overrides CMD)
 
-2. **実行結果確認**: コマンドの終了コードで成功/失敗を判定する
+2. **Check result**: Use exit code to determine success/failure
 
-3. **失敗時のログ確認**: パイプラインが失敗した場合、以下でエラーログを取得する
+3. **On failure, get logs**:
    ```bash
    gcloud logging read "resource.type=cloud_run_job AND resource.labels.job_name=ml-pipeline" \
      --project horse-racing-ml-dev \
      --limit 50 --freshness=30m
    ```
 
-4. **レポート取得**: GCSからバックテストレポートJSONを取得する
+4. **Fetch report from GCS**
    ```bash
    uv run python -c "
    from google.cloud import storage
@@ -47,12 +50,10 @@ prod環境の `ml-pipeline` Cloud Run Job を実行し、バックテストレ�
    print(data['report'])
    "
    ```
-   - JSONフォーマット: `{"report": "<markdown>"}`
-   - 取得失敗時は空JSONとして扱う
 
-5. **メトリクス表示**: レポートのmarkdownから `| Metric | Value |` テーブルを解析し、主要メトリクス（Win Accuracy, AUC ROC等）をフォーマットして表示する
+5. **Display metrics**: Parse `| Metric | Value |` table and display formatted results
 
-## 出力フォーマット
+## Output Format
 
 ```markdown
 ## Pipeline Execution Report
@@ -67,14 +68,14 @@ prod環境の `ml-pipeline` Cloud Run Job を実行し、バックテストレ�
 
 <details>
 <summary>Full Backtest Report</summary>
-{レポート全文}
+{full report}
 </details>
 ```
 
-## よくあるエラーと対処法
+## Common Errors
 
-| エラー | 原因 | 対処法 |
-|--------|------|--------|
-| `Dataset not found` | BigQueryデータセット未作成 | `terraform apply` でデータセット作成 |
-| `Table not found: horse_results_raw` | データ未インポート | `import-data` skill でデータインポート |
-| `Memory limit exceeded` | メモリ不足 | Cloud Run Jobのメモリ設定を増やす |
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `Dataset not found` | BigQuery dataset not created | Run `terraform apply` |
+| `Table not found: horse_results_raw` | Data not imported | Run `import-data` skill |
+| `Memory limit exceeded` | Insufficient memory | Increase Cloud Run Job memory |

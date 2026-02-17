@@ -1,18 +1,24 @@
-# Preview Report Skill
+---
+name: preview-report
+description: Execute the dev environment ML pipeline on Cloud Run and post a backtest metrics report as a PR comment. Use when the user wants to validate pipeline changes before merging or check model accuracy on a PR.
+---
 
-dev環境にデプロイ済みの `ml-pipeline-preview` Cloud Run Jobを実行し、バックテストレポートをPRコメントに投稿する。
+# Preview Report
 
-## 前提条件
+## Prerequisites
 
-- 現在のブランチにPRが存在すること
-- `preview-deploy` ラベルによりdev環境へのデプロイが完了していること（GitHub Actions）
-- `gcloud` CLIでGCP認証済みであること
+- PR exists on current branch
+- `preview-deploy` label added and dev deployment completed (GitHub Actions)
+- `gcloud` CLI authenticated
 
-## 手順
+## Workflow
 
-1. **PR情報取得**: `gh pr view --json number,headRefOid` で現在のブランチのPR番号とHEAD commitを取得する
+1. **Get PR info**
+   ```bash
+   gh pr view --json number,headRefOid
+   ```
 
-2. **パイプライン実行**: 以下のコマンドでCloud Run Jobを実行し完了を待機する
+2. **Execute Cloud Run Job**
    ```bash
    gcloud run jobs execute ml-pipeline-preview \
      --region us-central1 \
@@ -20,23 +26,21 @@ dev環境にデプロイ済みの `ml-pipeline-preview` Cloud Run Jobを実行�
      --wait
    ```
 
-3. **レポート取得**: GCSからバックテストレポートJSONを取得する
+3. **Fetch report from GCS**
    ```bash
    gsutil cat gs://horse-racing-ml-dev-processed/reports/backtest_report.json
    ```
-   - JSONフォーマット: `{"report": "<markdown>"}`
-   - 取得失敗時は空JSONとして扱う
+   JSON format: `{"report": "<markdown>"}`
 
-4. **メトリクス抽出**: レポートのmarkdownから `| Metric | Value |` テーブルを解析し、主要メトリクス（Win Accuracy, AUC ROC等）を抽出する
+4. **Extract metrics**: Parse the `| Metric | Value |` table from the markdown report
 
-5. **PRコメント投稿/更新**: `gh api` を使用してPRコメントを投稿する
-   - HTMLマーカー `<!-- preview-deploy-report -->` で既存コメントを検索
-   - 既存コメントがあればPATCHで更新、なければPOSTで新規作成
-   - これにより同一PRに重複コメントを防止する
+5. **Post/update PR comment** using `gh api`:
+   - Search for existing comment with HTML marker `<!-- preview-deploy-report -->`
+   - PATCH to update if found, POST to create if not (prevents duplicates)
 
-6. **失敗時の処理**: パイプライン実行が失敗した場合も、Status: Failed としてPRコメントを投稿する
+6. **On failure**: Post a "Status: Failed" comment even if the pipeline fails
 
-## PRコメントフォーマット
+## PR Comment Format
 
 ```markdown
 <!-- preview-deploy-report -->
@@ -53,6 +57,6 @@ dev環境にデプロイ済みの `ml-pipeline-preview` Cloud Run Jobを実行�
 
 <details>
 <summary>Full Backtest Report</summary>
-{レポート全文}
+{full report}
 </details>
 ```
