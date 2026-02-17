@@ -41,8 +41,8 @@ class PipelineOrchestrator:
     Args:
         date_from: Start date filter (YYYY-MM-DD).
         date_to: End date filter (YYYY-MM-DD).
-        train_window: Training window in days for backtest.
-        test_window: Test window in days for backtest.
+        train_window: Training window in days for backtest (default: from config).
+        test_window: Test window in days for backtest (default: from config).
         model_name: Model identifier for registry.
         data_source: Data source (``bigquery`` or ``csv``).
     """
@@ -51,18 +51,29 @@ class PipelineOrchestrator:
         self,
         date_from: str | None = None,
         date_to: str | None = None,
-        train_window: int = 365,
-        test_window: int = 30,
+        train_window: int | None = None,
+        test_window: int | None = None,
         model_name: str = "win_classifier",
         data_source: str | None = None,
     ) -> None:
         self._date_from = date_from
         self._date_to = date_to
-        self._train_window = train_window
-        self._test_window = test_window
         self._model_name = model_name
         self._data_source = data_source or os.getenv("PIPELINE_DATA_SOURCE", "bigquery")
         self._settings = get_settings()
+
+        # Resolve backtest parameters from config when not explicitly provided
+        self._train_window = (
+            train_window
+            if train_window is not None
+            else self._settings.backtest.train_window_days
+        )
+        self._test_window = (
+            test_window
+            if test_window is not None
+            else self._settings.backtest.test_window_days
+        )
+        self._step_days = self._settings.backtest.step_days
 
         # Apply default date range (last 5 years) when not specified
         if self._date_from is None and self._date_to is None:
@@ -259,7 +270,7 @@ class PipelineOrchestrator:
         engine = BacktestEngine(
             train_window_days=self._train_window,
             test_window_days=self._test_window,
-            step_days=self._test_window,
+            step_days=self._step_days,
         )
         self._backtest_result = engine.run(
             df=self._feature_df,
@@ -442,6 +453,7 @@ class PipelineOrchestrator:
             {
                 "backtest_train_window": self._train_window,
                 "backtest_test_window": self._test_window,
+                "backtest_step_days": self._step_days,
                 "backtest_n_periods": len(self._backtest_result.periods),
             }
         )

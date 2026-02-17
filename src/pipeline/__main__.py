@@ -52,14 +52,14 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--train-window",
         type=int,
-        default=365,
-        help="Training window in days for backtest (default: 365)",
+        default=None,
+        help="Training window in days for backtest (default: from config)",
     )
     parser.add_argument(
         "--test-window",
         type=int,
-        default=30,
-        help="Test window in days for backtest (default: 30)",
+        default=None,
+        help="Test window in days for backtest (default: from config)",
     )
     parser.add_argument(
         "--model-name",
