@@ -284,30 +284,6 @@ resource "google_bigquery_table" "jockey_results_raw" {
   ])
 }
 
-resource "google_bigquery_table" "evaluation_results" {
-  dataset_id          = google_bigquery_dataset.horse_racing.dataset_id
-  table_id            = "evaluation_results"
-  deletion_protection = local.environment == "prod"
-
-  labels = {
-    environment = local.environment
-  }
-
-  schema = jsonencode([
-    { name = "model_name", type = "STRING", mode = "REQUIRED" },
-    { name = "win_accuracy", type = "FLOAT64", mode = "NULLABLE" },
-    { name = "place_accuracy", type = "FLOAT64", mode = "NULLABLE" },
-    { name = "top3_accuracy", type = "FLOAT64", mode = "NULLABLE" },
-    { name = "ndcg", type = "FLOAT64", mode = "NULLABLE" },
-    { name = "ndcg_at_3", type = "FLOAT64", mode = "NULLABLE" },
-    { name = "auc_roc", type = "FLOAT64", mode = "NULLABLE" },
-    { name = "log_loss", type = "FLOAT64", mode = "NULLABLE" },
-    { name = "precision", type = "FLOAT64", mode = "NULLABLE" },
-    { name = "recall", type = "FLOAT64", mode = "NULLABLE" },
-    { name = "f1", type = "FLOAT64", mode = "NULLABLE" },
-  ])
-}
-
 # -------------------------------------------------------------------
 # Secret Manager
 # -------------------------------------------------------------------
