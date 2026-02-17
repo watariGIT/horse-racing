@@ -26,8 +26,9 @@ Data Import -> Feature Engineering -> Training -> Prediction -> Evaluation
 ### MLflow Experiment Tracking
 - **Tracking URI**: Local file store (dev) / GCS `gs://{project}-models/mlruns` (prod)
 - **Run naming**: `{model_type}_{YYYYMMDD_HHmmss}` with environment/model/feature tags
-- **Artifacts**: Feature importance (PNG/JSON), backtest results (JSON)
+- **Artifacts**: Feature importance (PNG/JSON), backtest results (JSON), evaluation metrics
 - **Model Registry linkage**: `mlflow_run_id` stored in GCS model metadata
+- **Storage**: Evaluation results stored exclusively in MLflow (no separate BigQuery table)
 - **Comparison**: `uv run python -m src.model_training.compare_experiments --last 5`
 
 ## Tech Stack
