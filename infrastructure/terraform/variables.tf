@@ -39,6 +39,12 @@ variable "mlflow_ui_enabled" {
   default     = false
 }
 
+variable "mlflow_ui_image_tag" {
+  description = "Docker image tag for MLflow UI"
+  type        = string
+  default     = "latest"
+}
+
 variable "github_repository" {
   description = "GitHub repository in format 'owner/repo'"
   type        = string

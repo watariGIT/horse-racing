@@ -11,7 +11,7 @@ env:
   GCP_PROJECT_ID: horse-racing-ml-dev
 
 jobs:
-  deploy:
+  build-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -39,17 +39,3 @@ jobs:
           docker build -t "${IMAGE}" -t "${IMAGE_LATEST}" infrastructure/mlflow/
           docker push "${IMAGE}"
           docker push "${IMAGE_LATEST}"
-
-      - name: Deploy to Cloud Run
-        run: |
-          gcloud run deploy mlflow-ui \
-            --image ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ml-pipeline/mlflow-ui:${{ github.sha }} \
-            --region ${{ env.GCP_REGION }} \
-            --project ${{ env.GCP_PROJECT_ID }} \
-            --memory 512Mi \
-            --cpu 1 \
-            --min-instances 0 \
-            --max-instances 1 \
-            --no-allow-unauthenticated \
-            --service-account ${{ secrets.SERVICE_ACCOUNT }} \
-            --set-env-vars "MLFLOW_BACKEND_STORE_URI=gs://${{ env.GCP_PROJECT_ID }}-models/mlruns"

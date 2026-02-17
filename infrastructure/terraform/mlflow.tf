@@ -14,7 +14,7 @@ resource "google_cloud_run_v2_service" "mlflow_ui" {
     }
 
     containers {
-      image = "${var.region}-docker.pkg.dev/${var.project_id}/ml-pipeline/mlflow-ui:latest"
+      image = "${var.region}-docker.pkg.dev/${var.project_id}/ml-pipeline/mlflow-ui:${var.mlflow_ui_image_tag}"
 
       ports {
         container_port = 8080
