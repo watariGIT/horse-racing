@@ -140,6 +140,16 @@ class TestDataPreparer:
 class TestPipelineOrchestrator:
     """Tests for PipelineOrchestrator stage methods."""
 
+    @pytest.fixture(autouse=True)
+    def _reset_mlflow_state(self) -> None:
+        """Reset MLflow global state to avoid stale tracking URI from prior tests."""
+        import mlflow
+
+        mlflow.set_tracking_uri("file:./mlruns")
+        from src.common.config import get_settings
+
+        get_settings.cache_clear()
+
     def test_default_data_source_is_bigquery(self) -> None:
         """Default data source should be bigquery."""
         orchestrator = PipelineOrchestrator()
