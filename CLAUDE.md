@@ -30,7 +30,8 @@ Data Import -> Feature Engineering -> Training -> Prediction -> Evaluation
 - **Access**: Authenticated GCP users only (IAM `roles/run.invoker` required)
 - **Image**: `infrastructure/mlflow/Dockerfile`
 - **Deploy**: Image auto-built on `infrastructure/mlflow/**` changes via `deploy-mlflow.yaml`; Cloud Run Service managed by Terraform (`mlflow.tf`)
-- **Enable**: `mlflow_ui_enabled = true` in tfvars (default: false in prod)
+- **Artifact Store**: GCS (`gs://{project}-models/mlartifacts`) に `--serve-artifacts` でプロキシ
+- **Enable**: `mlflow_ui_enabled = true` in tfvars (dev/prod 両方有効)
 - **Cost**: ~$0 when idle (scales to zero)
 - **Service naming**: `mlflow-ui-{env}` (e.g., `mlflow-ui-dev`, `mlflow-ui-prod`)
 - **Access URL**: `gcloud run services describe mlflow-ui-{env} --region us-central1 --format 'value(status.url)'`
@@ -63,7 +64,8 @@ src/
 ├── common/                 # Shared utilities (config, GCP clients, logging)
 │   ├── config.py           # Pydantic Settings + YAML config
 │   ├── gcp_client.py       # GCS/BigQuery client wrapper
-│   └── logging.py          # structlog setup
+│   ├── logging.py          # structlog setup
+│   └── mlflow_auth.py      # MLflow Cloud Run IAM auth plugin (RequestHeaderProvider)
 ├── data_collector/         # Data collection/import (Kaggle CSV / JRA API)
 ├── feature_engineering/    # Feature extraction pipeline
 ├── model_training/         # Model training + experiment tracking (MLflow)
@@ -119,7 +121,7 @@ uv run mypy src/                        # Type check
 ### CI/CD
 
 - **On PR**: Auto-run tests (test.yaml), lint (lint.yaml), Docker build validation (preview-deploy.yaml)
-- **On PR (label)**: `preview-deploy` label triggers dev environment deployment (preview-deploy.yaml)
+- **On PR (label)**: `preview-deploy` label triggers dev environment deployment (preview-deploy.yaml) — ML pipeline + MLflow UI イメージのビルド・デプロイ
 - **On main push**: Test + lint → prod deploy to Cloud Run Jobs (deploy.yaml)
 - **On main push (mlflow)**: `infrastructure/mlflow/**` changes → MLflow UI image build+push (deploy-mlflow.yaml)
 - **Deploy method**: `docker build/push` → Artifact Registry → Cloud Run Jobs

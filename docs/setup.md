@@ -91,8 +91,11 @@ BQ_DATASET=horse_racing_dev
 | `GCS_BUCKET_RAW` | 生データバケット | `{project_id}-raw-data` |
 | `GCS_BUCKET_PROCESSED` | 加工済みデータバケット | `{project_id}-processed` |
 | `GCS_BUCKET_MODELS` | モデルバケット | `{project_id}-models` |
+| `MLFLOW_TRACKING_URI` | MLflow Tracking Server URL | `file:./mlruns` (ローカル) |
 
 GCSバケット名は `GCP_PROJECT_ID` から自動生成されるため、通常は設定不要。
+
+`MLFLOW_TRACKING_URI` は Cloud Run Job 実行時に自動設定されるため、ローカル開発時は設定不要（デフォルトの `file:./mlruns` が使用される）。
 
 ## 4. GCP認証
 

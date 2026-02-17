@@ -109,8 +109,10 @@ horse-racing/
 
 実験結果をブラウザで可視化するためのMLflow UIを Cloud Run Service でホスティングしています。
 
+- **HTTP Tracking Server**: パイプラインから HTTP 経由で実験を記録（`RequestHeaderProvider` プラグインで GCP IAM 認証を自動付与）
 - **スケールゼロ**: リクエストがない間はインスタンスが停止し、コストは ~$0
 - **GCS FUSE**: GCSバケットをボリュームマウントしてMLflowデータを直接参照（Gen2ランタイム）
+- **アーティファクト**: `--serve-artifacts` でアーティファクトを GCS (`gs://{project}-models/mlartifacts`) にプロキシ保存
 - **認証必須**: IAM `roles/run.invoker` を持つユーザーのみアクセス可能
 - **コールドスタート**: 初回アクセス時に30-60秒の起動時間あり（GCS FUSEマウント含む）
 
