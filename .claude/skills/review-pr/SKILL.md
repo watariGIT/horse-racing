@@ -98,7 +98,7 @@ description: Create a team of 5 specialized reviewer agents to review the curren
 | WARNING | {n} |
 | SUGGESTION | {n} |
 
-{CRITICAL > 0 の場合のみ表示: "⚠️ **CRITICAL指摘があります。マージ前に対応が必要です。**"}
+{CRITICAL > 0 の場合のみ表示: "**CRITICAL指摘があります。マージ前に対応が必要です。**"}
 
 <details>
 <summary>Engineering ({n}件)</summary>
