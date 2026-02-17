@@ -33,6 +33,12 @@ variable "cloud_run_cpu" {
   default     = "1"
 }
 
+variable "mlflow_ui_enabled" {
+  description = "Whether to deploy MLflow UI Cloud Run Service"
+  type        = bool
+  default     = false
+}
+
 variable "github_repository" {
   description = "GitHub repository in format 'owner/repo'"
   type        = string

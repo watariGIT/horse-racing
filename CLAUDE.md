@@ -23,6 +23,13 @@ Data Import -> Feature Engineering -> Training -> Prediction -> Evaluation
 - **Secret Manager**: API key management
 - **Workload Identity Federation**: GitHub Actions CI/CD auth
 
+### MLflow UI
+- **Hosting**: Cloud Run Service (min-instances=0, scales to zero when idle)
+- **Access**: Authenticated GCP users only (`--no-allow-unauthenticated`)
+- **Image**: `infrastructure/mlflow/Dockerfile`
+- **Deploy**: Auto on `infrastructure/mlflow/**` changes via `deploy-mlflow.yaml`
+- **Cost**: ~$0 when idle (scales to zero)
+
 ### MLflow Experiment Tracking
 - **Tracking URI**: Local file store (dev) / GCS `gs://{project}-models/mlruns` (prod)
 - **Run naming**: `{model_type}_{YYYYMMDD_HHmmss}` with environment/model/feature tags
