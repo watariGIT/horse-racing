@@ -7,11 +7,13 @@ USER mlflow
 
 ENV PORT=8080
 ENV MLFLOW_BACKEND_STORE_URI=""
+ENV MLFLOW_ARTIFACTS_DESTINATION=""
 
 EXPOSE ${PORT}
 
 CMD exec mlflow server \
     --backend-store-uri "${MLFLOW_BACKEND_STORE_URI}" \
     --serve-artifacts \
+    --artifacts-destination "${MLFLOW_ARTIFACTS_DESTINATION}" \
     --host 0.0.0.0 \
     --port ${PORT}
