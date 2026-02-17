@@ -690,3 +690,128 @@ class TestReporter:
 
         assert path.exists()
         assert path.read_text(encoding="utf-8") == content
+
+
+class TestLeakageReport:
+    """Tests for Reporter.generate_leakage_report."""
+
+    @staticmethod
+    def _make_result(auc_values: list[float]) -> BacktestResult:
+        """Build a BacktestResult with given per-period AUC values."""
+        from src.evaluator.backtest_engine import BacktestPeriod
+
+        periods = []
+        for i, auc in enumerate(auc_values):
+            periods.append(
+                BacktestPeriod(
+                    period_index=i,
+                    train_start="2024-01-01",
+                    train_end="2024-01-31",
+                    test_start=f"2024-{i + 2:02d}-01",
+                    test_end=f"2024-{i + 2:02d}-14",
+                    n_train=100,
+                    n_test=20,
+                    metrics=MetricsResult(
+                        values={"win_accuracy": 0.15, "auc_roc": auc}
+                    ),
+                )
+            )
+        return BacktestResult(
+            periods=periods,
+            overall_metrics=MetricsResult(
+                values={"win_accuracy": 0.15, "auc_roc": 0.70}
+            ),
+        )
+
+    def test_leakage_report_no_anomalies(self):
+        result = self._make_result([0.70, 0.71, 0.72, 0.70, 0.71])
+        reporter = Reporter(model_name="test_model")
+        md = reporter.generate_leakage_report(result)
+
+        assert "Temporal Leakage Verification Report" in md
+        assert "test_model" in md
+        assert "No anomalous AUC spikes detected." in md
+        assert "No significant temporal data leakage detected." in md
+
+    def test_leakage_report_with_anomaly(self):
+        result = self._make_result(
+            [0.70, 0.71, 0.70, 0.71, 0.70, 0.71, 0.70, 0.71, 0.70, 0.99]
+        )
+        reporter = Reporter(model_name="test_model")
+        md = reporter.generate_leakage_report(result)
+
+        assert "WARNING" in md
+        assert "potential leakage" in md
+        assert "Potential issues detected:" in md
+
+    def test_leakage_report_with_train_auc(self):
+        result = self._make_result([0.70, 0.71, 0.72])
+        reporter = Reporter(model_name="test_model")
+
+        # Small gap - acceptable
+        md = reporter.generate_leakage_report(result, train_auc=0.775)
+        assert "Train vs Val AUC Assessment" in md
+        assert "Gap" in md
+        assert "Within acceptable range." in md
+
+        # Large gap - warning
+        md = reporter.generate_leakage_report(result, train_auc=0.95)
+        assert "WARNING: Large gap" in md
+
+
+# ---------------------------------------------------------------------------
+# Backtest temporal integrity tests
+# ---------------------------------------------------------------------------
+
+
+class TestBacktestTemporalIntegrity:
+    """Verify that backtest periods maintain strict temporal separation."""
+
+    def test_no_temporal_overlap(self):
+        """For every BacktestPeriod, train_end must be before test_start."""
+        from datetime import date
+
+        from tests.conftest import MockModel
+
+        np.random.seed(42)
+        n_per_race = 4
+        dates = []
+        race_ids = []
+        horse_ids = []
+
+        for day_offset in range(150):
+            date_str = f"2024-{1 + day_offset // 30:02d}-{1 + day_offset % 28:02d}"
+            race_id = f"R{day_offset:04d}"
+            for h in range(n_per_race):
+                dates.append(date_str)
+                race_ids.append(race_id)
+                horse_ids.append(f"H{h:03d}")
+
+        n = len(dates)
+        df = pl.DataFrame(
+            {
+                "race_date": dates,
+                "race_id": race_ids,
+                "horse_id": horse_ids,
+                "feat_x": np.random.randn(n),
+                "is_win": [1 if i % n_per_race == 0 else 0 for i in range(n)],
+                "actual_position": [(i % n_per_race) + 1 for i in range(n)],
+            }
+        )
+
+        engine = BacktestEngine(
+            train_window_days=30,
+            test_window_days=14,
+            step_days=14,
+        )
+        result = engine.run(df, MockModel(seed=42))
+
+        assert len(result.periods) > 0, "Backtest should produce at least one period"
+
+        for period in result.periods:
+            train_end = date.fromisoformat(period.train_end)
+            test_start = date.fromisoformat(period.test_start)
+            assert train_end < test_start, (
+                f"Period {period.period_index}: train_end ({train_end}) "
+                f"must be strictly before test_start ({test_start})"
+            )
