@@ -1,6 +1,6 @@
 FROM python:3.10-slim
 
-RUN pip install --no-cache-dir "mlflow>=2.10.0,<3" "google-cloud-storage>=2.14.0,<3"
+RUN pip install --no-cache-dir "mlflow>=2.10.0,<2.20" "google-cloud-storage>=2.14.0,<3"
 
 RUN useradd -r -s /bin/false mlflow
 USER mlflow

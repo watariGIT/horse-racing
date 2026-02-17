@@ -40,6 +40,9 @@ jobs:
           docker push "${IMAGE}"
           docker push "${IMAGE_LATEST}"
 
+      # NOTE: This step requires the Cloud Run service to already exist.
+      # The service is created by Terraform (mlflow.tf) with mlflow_ui_enabled=true.
+      # Run `terraform apply` before the first execution of this workflow.
       - name: Deploy to Cloud Run
         run: |
           gcloud run services update mlflow-ui \
