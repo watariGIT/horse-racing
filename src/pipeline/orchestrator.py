@@ -323,17 +323,14 @@ class PipelineOrchestrator:
         return result
 
     def _save_to_gcp(self) -> dict[str, str]:
-        """Upload model to GCS via ModelRegistry.
-
-        Backtest reports and feature importances are stored exclusively
-        in MLflow; evaluation metrics are logged as MLflow metrics.
-        """
-        from src.common.gcp_client import GCSClient
+        """Upload artifacts to GCS and BigQuery."""
+        from src.common.gcp_client import BigQueryClient, GCSClient
         from src.model_training.model_registry import ModelRegistry
 
         gcs = GCSClient()
         saved: dict[str, str] = {}
 
+        # Save model
         if self._model is not None:
             registry = ModelRegistry(gcs_client=gcs)
             extra_metadata: dict[str, Any] = {}
@@ -346,6 +343,52 @@ class PipelineOrchestrator:
                 extra_metadata=extra_metadata or None,
             )
             saved["model_version"] = version
+
+        # Save backtest report
+        bucket = self._settings.gcs.bucket_processed
+        if bucket and self._report_content:
+            uri = gcs.upload_json(
+                bucket_name=bucket,
+                data={"report": self._report_content},
+                destination_blob="reports/backtest_report.json",
+            )
+            saved["report_uri"] = uri
+
+        # Save feature importances
+        if self._model is not None and self._model.is_fitted:
+            feature_cols = [
+                c
+                for c in (self._feature_df or pl.DataFrame()).columns
+                if c.startswith("feat_")
+            ]
+            try:
+                importances = self._model.feature_importances
+                importance_data = dict(zip(feature_cols, importances.tolist()))
+                uri = gcs.upload_json(
+                    bucket_name=bucket,
+                    data=importance_data,
+                    destination_blob="reports/feature_importances.json",
+                )
+                saved["feature_importances_uri"] = uri
+            except RuntimeError:
+                logger.debug("Feature importances not available")
+
+        # Save metrics to BigQuery
+        if self._backtest_result is not None:
+            try:
+                bq = BigQueryClient()
+                metrics_df = pd.DataFrame(
+                    [self._backtest_result.overall_metrics.to_dict()]
+                )
+                metrics_df["model_name"] = self._model_name
+                bq.load_dataframe(
+                    df=metrics_df,
+                    table_id="evaluation_results",
+                    write_disposition="WRITE_APPEND",
+                )
+                saved["metrics_table"] = "evaluation_results"
+            except Exception as e:
+                logger.warning("BigQuery metrics save failed", error=str(e))
 
         return saved
 
