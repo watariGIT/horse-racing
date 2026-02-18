@@ -24,7 +24,7 @@ description: Review model accuracy results from MLflow and suggest improvements.
    gcloud run services describe mlflow-ui-dev \
      --region us-central1 --project horse-racing-ml-dev \
      --format 'value(status.url)'
-   ```
+   ```/
 
    Store the PR number, title, commit SHA, and MLflow UI base URL.
 
@@ -218,7 +218,7 @@ description: Review model accuracy results from MLflow and suggest improvements.
    Search for existing comment:
    ```bash
    gh api repos/{owner}/{repo}/issues/{pr_number}/comments \
-     --jq '.[] | select(.body | contains("<!-- accuracy-review-report -->")) | .id'
+     --jq '[.[] | select(.body | test("accuracy-review-report")) | .id] | first'
    ```
 
    If found: PATCH to update:
