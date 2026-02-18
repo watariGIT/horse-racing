@@ -69,6 +69,10 @@ class ModelConfig(BaseModel):
     feature_version: str = "v1"
 
 
+class FeaturePipelineConfig(BaseModel):
+    extractors: list[str] = ["race", "horse", "jockey", "running_style"]
+
+
 class LoggingConfig(BaseModel):
     level: str = "INFO"
     format: str = "json"
@@ -94,6 +98,9 @@ class AppSettings(BaseSettings):
     cloud_run: CloudRunConfig = Field(default_factory=CloudRunConfig)
     kaggle: KaggleConfig = Field(default_factory=KaggleConfig)
     model: ModelConfig = Field(default_factory=ModelConfig)
+    feature_pipeline: FeaturePipelineConfig = Field(
+        default_factory=FeaturePipelineConfig
+    )
     backtest: BacktestConfig = Field(default_factory=BacktestConfig)
     mlflow: MLflowConfig = Field(default_factory=MLflowConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
