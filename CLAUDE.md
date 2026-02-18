@@ -67,7 +67,13 @@ src/
 │   ├── logging.py          # structlog setup
 │   └── mlflow_auth.py      # MLflow Cloud Run IAM auth plugin (RequestHeaderProvider)
 ├── data_collector/         # Data collection/import (Kaggle CSV / JRA API)
-├── feature_engineering/    # Feature extraction pipeline
+├── feature_engineering/    # Feature extraction pipeline (v2: 26 features)
+│   ├── extractors/
+│   │   ├── race_features.py          # 6 features (distance, track, weather, etc.)
+│   │   ├── horse_features.py         # 14 features (stats, odds, gate, weight, sex)
+│   │   ├── jockey_features.py        # 4 features (win rate, top3, experience)
+│   │   └── running_style_features.py # 2 features (avg corner pos, avg last 3F)
+│   └── pipeline.py                   # FeaturePipeline (Strategy pattern)
 ├── model_training/         # Model training + experiment tracking (MLflow)
 ├── predictor/              # Prediction execution
 └── evaluator/              # Backtesting + evaluation
@@ -82,6 +88,16 @@ Config loading priority (later overrides earlier):
 4. Environment variables
 
 Switch environments via `ENVIRONMENT` env var (`dev` / `prod`).
+
+### Feature Settings
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `model.feature_version` | `v2` | Feature version tag (logged to MLflow for experiment comparison) |
+
+Feature version history:
+- **v1**: 13 features (race 6 + horse 7)
+- **v2**: 26 features (race 6 + horse 14 + jockey 4 + running_style 2)
 
 ### MLflow Settings
 
