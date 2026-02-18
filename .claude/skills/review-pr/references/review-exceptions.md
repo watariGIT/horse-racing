@@ -31,3 +31,43 @@ dev/prod は同一 GCP プロジェクト上で Terraform Workspace により分
 `in_context()` が `False`（ローカル開発・CI 環境）の場合に不要なインポートを回避するためのパフォーマンス最適化。
 MLflow の `RequestHeaderProvider` プラグインはプロセス起動時にロードされるため、
 トップレベルインポートにすると非 HTTPS 環境でも `google.auth` が常にインポートされる。
+
+---
+
+## Data Preparer / Feature Engineering
+
+### `src/pipeline/data_preparer.py` - `days_since_last_race` の `.over("horse_id")` は正しい
+
+`race_date.shift(1).over("horse_id")` により馬ごとの前走日付を正しく取得している。
+外側の `race_date - ...` で当該レース日との差分を計算するため、リーケージなし。
+
+### `src/feature_engineering/extractors/horse_features.py` - `win_odds` / `win_favorite` はレース前データ
+
+Kaggle データの `win_odds`（確定オッズ）と `win_favorite`（人気順位）は発走直前に確定する情報であり、
+レース結果（着順）ではない。競馬予測 ML で一般的に使用される pre-race 特徴量。
+
+### `src/pipeline/data_preparer.py` - `race_date` のみのソートで十分
+
+同一馬の同日複数出走は極めて稀であり、`rolling_mean` は微小な順序差に対して非感受的。
+副キー追加による複雑化に見合うメリットがない。
+
+### `src/pipeline/orchestrator.py` - SQL テーブル名の文字列フォーマット
+
+`_load_from_bigquery` のテーブル名は `settings.bigquery.dataset`（内部設定値）由来であり、
+ユーザー入力ではない。SQL インジェクションリスクなし。
+
+### `src/pipeline/data_preparer.py` - `age` → `horse_age` リネーム
+
+DataPreparer はデータ正規化の責務を持ち、KaggleLoader の出力カラム名 (`age`) を
+HorseFeatureExtractor の期待 (`horse_age`) に合わせる適切な場所。
+
+### `src/pipeline/data_preparer.py` - walk-forward バックテストでの CV リーケージなし
+
+本システムは walk-forward バックテストを使用しており、DataPreparer 段階での
+ローリング集計が fold 間リーケージを引き起こすことはない。
+将来 k-fold CV を導入する場合は再設計が必要（その時点で対応）。
+
+### `src/evaluator/backtest_engine.py` - バックテスト再学習タイミング
+
+BacktestEngine は各 walk-forward ステップで新規モデルを学習する設計。
+既存動作であり PR #50 の変更対象外。

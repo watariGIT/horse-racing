@@ -184,6 +184,7 @@ class DataPreparer:
             .rolling_mean(window_size=n, min_samples=1)
             .over("jockey_id")
             .alias("jockey_top3_rate"),
+            # jockey_experience: 初回出走=0 (当該レース含む累積 - 1)
             pl.col("finish_position")
             .cum_count()
             .over("jockey_id")
