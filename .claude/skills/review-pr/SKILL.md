@@ -111,7 +111,7 @@ description: Create a team of specialized reviewer agents (dynamically selected 
 7. **Post/update PR comment** using `gh api`:
    - Search for existing comment with marker `<!-- code-review-report -->`:
      ```bash
-     gh api repos/{owner}/{repo}/issues/{pr_number}/comments --jq '.[] | select(.body | contains("<!-- code-review-report -->")) | .id'
+     gh api repos/{owner}/{repo}/issues/{pr_number}/comments --jq '[.[] | select(.body | test("code-review-report")) | .id] | first'
      ```
    - If found: PATCH to update
      ```bash

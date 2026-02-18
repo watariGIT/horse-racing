@@ -24,11 +24,11 @@ description: Review model accuracy results from MLflow and suggest improvements.
    gcloud run services describe mlflow-ui-dev \
      --region us-central1 --project horse-racing-ml-dev \
      --format 'value(status.url)'
-   ```
+   ```/
 
    Store the PR number, title, commit SHA, and MLflow UI base URL.
 
-2. **Fetch experiment data from MLflow (via GCS)**
+2. **Fetch experiment data from MLflow and GCS**
 
    Get the latest model version and its MLflow run ID:
 
@@ -48,15 +48,51 @@ description: Review model accuracy results from MLflow and suggest improvements.
    - `metrics` — training metrics
    - `model_type`, `params` — model configuration
 
-   Fetch the full backtest report:
+   Fetch backtest metrics from MLflow:
 
    ```bash
-   gsutil cat gs://horse-racing-ml-dev-processed/reports/backtest_report.json
+   gcloud run services proxy mlflow-ui-dev --region us-central1 --project horse-racing-ml-dev --port 5000 &
+   PROXY_PID=$!
+   sleep 3
    ```
 
-   Parse the JSON (`{"report": "<markdown>"}`) and extract:
-   - Overall metrics table (`| Metric | Value |`)
-   - Per-period results table
+   ```bash
+   uv run python -c "
+   import mlflow, json
+   mlflow.set_tracking_uri('http://localhost:5000')
+   runs = mlflow.search_runs(
+       experiment_names=['horse-racing-prediction'],
+       max_results=1,
+       order_by=['start_time DESC'],
+   )
+   if not runs.empty:
+       row = runs.iloc[0]
+       # Overall metrics
+       metrics = {}
+       for c in sorted(runs.columns):
+           if c.startswith('metrics.backtest_overall_'):
+               name = c.replace('metrics.backtest_overall_', '')
+               metrics[name] = round(row[c], 4)
+       print(json.dumps(metrics, indent=2))
+       # Download per-period backtest artifact
+       run_id = row['run_id']
+       local_path = mlflow.artifacts.download_artifacts(run_id=run_id, artifact_path='backtest_results.json')
+       with open(local_path) as f:
+           backtest = json.load(f)
+       print('---PERIODS---')
+       print(json.dumps(backtest.get('periods', []), indent=2))
+   "
+   ```
+
+   ```bash
+   kill $PROXY_PID 2>/dev/null
+   ```
+
+   **トラブルシューティング**: proxy 接続エラー時は `lsof -i :5000` でポート競合を確認し、別ポート (`--port 5001`) で再試行する。
+
+   Extract from the output:
+   - Overall metrics (JSON before `---PERIODS---`)
+   - Per-period results (JSON after `---PERIODS---`)
 
    Fetch feature importances artifact:
 
@@ -183,7 +219,7 @@ description: Review model accuracy results from MLflow and suggest improvements.
    Search for existing comment:
    ```bash
    gh api repos/{owner}/{repo}/issues/{pr_number}/comments \
-     --jq '.[] | select(.body | contains("<!-- accuracy-review-report -->")) | .id'
+     --jq '[.[] | select(.body | test("accuracy-review-report")) | .id] | first'
    ```
 
    If found: PATCH to update:

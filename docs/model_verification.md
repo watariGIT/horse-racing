@@ -30,9 +30,12 @@ gcloud logging read \
   "resource.type=cloud_run_job AND resource.labels.job_name=ml-pipeline" \
   --project horse-racing-ml-dev --limit 100
 
-# Retrieve reports
-gsutil cp gs://horse-racing-ml-dev-processed/reports/backtest_report.json ./reports/
-gsutil cp gs://horse-racing-ml-dev-processed/reports/feature_importances.json ./reports/
+# Retrieve results via MLflow
+gcloud run services proxy mlflow-ui-dev --region us-central1 --project horse-racing-ml-dev --port 5000 &
+PROXY_PID=$!
+sleep 3
+uv run python -m src.model_training.compare_experiments --last 1
+kill $PROXY_PID 2>/dev/null
 ```
 
 ## Evaluation Metrics

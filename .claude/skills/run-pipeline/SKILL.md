@@ -39,19 +39,43 @@ description: Execute the prod environment ML pipeline Cloud Run Job and display 
      --limit 50 --freshness=30m
    ```
 
-4. **Fetch report from GCS**
+4. **Fetch metrics from MLflow**
+
+   Start MLflow proxy and retrieve the latest run's backtest metrics:
+
+   ```bash
+   gcloud run services proxy mlflow-ui-prod --region us-central1 --project horse-racing-ml-dev --port 5000 &
+   PROXY_PID=$!
+   sleep 3
+   ```
+
    ```bash
    uv run python -c "
-   from google.cloud import storage
-   import json
-   client = storage.Client(project='horse-racing-ml-dev')
-   blob = client.bucket('horse-racing-ml-dev-processed').blob('reports/backtest_report.json')
-   data = json.loads(blob.download_as_text())
-   print(data['report'])
+   import mlflow, json
+   mlflow.set_tracking_uri('http://localhost:5000')
+   runs = mlflow.search_runs(
+       experiment_names=['horse-racing-prediction'],
+       max_results=1,
+       order_by=['start_time DESC'],
+   )
+   if not runs.empty:
+       row = runs.iloc[0]
+       metrics = {}
+       for c in sorted(runs.columns):
+           if c.startswith('metrics.backtest_overall_'):
+               name = c.replace('metrics.backtest_overall_', '')
+               metrics[name] = round(row[c], 4)
+       print(json.dumps(metrics, indent=2))
    "
    ```
 
-5. **Display metrics**: Parse `| Metric | Value |` table and display formatted results
+   ```bash
+   kill $PROXY_PID 2>/dev/null
+   ```
+
+   **トラブルシューティング**: proxy 接続エラー時は `lsof -i :5000` でポート競合を確認し、別ポート (`--port 5001`) で再試行する。
+
+5. **Display metrics**: Build `| Metric | Value |` table from the MLflow metrics JSON and display formatted results
 
 ## Output Format
 
