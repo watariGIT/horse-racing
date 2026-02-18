@@ -18,11 +18,11 @@ Verify the following before merging a PR.
 ## CI/CD / Infrastructure Changes
 
 - Add `preview-deploy` label and confirm dev deployment succeeds
-- Run preview-report skill and verify metrics in PR comment
+- Run run-pipeline-dev skill and verify metrics in PR comment
 
 ## Model / Feature Changes
 
-- Run preview-report skill and verify accuracy metrics
+- Run run-pipeline-dev skill and verify accuracy metrics
 - Confirm no significant accuracy degradation in PR comment report
 
 ## Documentation

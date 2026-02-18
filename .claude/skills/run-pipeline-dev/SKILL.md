@@ -1,5 +1,5 @@
 ---
-name: preview-report
+name: run-pipeline-dev
 description: Execute the dev environment ML pipeline on Cloud Run and post a backtest metrics report as a PR comment. Use when the user wants to validate pipeline changes before merging or check model accuracy on a PR.
 ---
 

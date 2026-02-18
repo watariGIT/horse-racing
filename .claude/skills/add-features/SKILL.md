@@ -54,7 +54,7 @@ Do NOT run model training locally (resource constraint).
 
 1. Create branch, commit, push, create PR (Japanese title/description, Closes #N)
 2. Add `preview-deploy` label, wait for CI + dev deployment
-3. Run `/preview-report` to execute Cloud Run backtest and post results as PR comment
+3. Run `/run-pipeline-dev` to execute Cloud Run backtest and post results as PR comment
 4. Add v(N-1) vs v(N) comparison table to PR comment:
 
 ```markdown
