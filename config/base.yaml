@@ -22,7 +22,7 @@ kaggle:
 
 model:
   default_type: lgbm_classifier
-  feature_version: v1
+  feature_version: v2
 
 backtest:
   train_window_days: 365

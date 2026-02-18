@@ -13,7 +13,7 @@ import polars as pl
 from src.common.logging import get_logger
 from src.data_collector.kaggle_loader import KaggleDataLoader
 from src.data_collector.schemas import (
-    HORSE_RESULT_SCHEMA,
+    EXTENDED_HORSE_RESULT_SCHEMA,
     JOCKEY_RESULT_SCHEMA,
     RACE_SCHEMA,
 )
@@ -104,9 +104,9 @@ class KaggleImporter:
         Returns:
             DataFrame with horse result columns.
         """
-        hr_cols = [c for c in HORSE_RESULT_SCHEMA if c in df.columns]
+        hr_cols = [c for c in EXTENDED_HORSE_RESULT_SCHEMA if c in df.columns]
         if not hr_cols:
-            return pl.DataFrame(schema=HORSE_RESULT_SCHEMA)
+            return pl.DataFrame(schema=EXTENDED_HORSE_RESULT_SCHEMA)
         return df.select(hr_cols)
 
     def _extract_jockey_results(self, df: pl.DataFrame) -> pl.DataFrame:

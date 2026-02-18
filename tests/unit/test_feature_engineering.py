@@ -12,6 +12,9 @@ import pytest
 from src.feature_engineering.extractors.horse_features import HorseFeatureExtractor
 from src.feature_engineering.extractors.jockey_features import JockeyFeatureExtractor
 from src.feature_engineering.extractors.race_features import RaceFeatureExtractor
+from src.feature_engineering.extractors.running_style_features import (
+    RunningStyleFeatureExtractor,
+)
 from src.feature_engineering.pipeline import FeaturePipeline
 from src.feature_engineering.transformers.encoders import CategoryEncoder
 from src.feature_engineering.transformers.scalers import FeatureScaler
@@ -169,10 +172,102 @@ class TestHorseFeatureExtractor:
         assert "top3_rate" in agg.columns
         assert "num_past_races" in agg.columns
 
+    def test_extract_new_features(self):
+        df = pl.DataFrame(
+            {
+                "horse_id": ["H001"],
+                "finish_position": [1],
+                "win_odds": [5.5],
+                "win_favorite": [2],
+                "bracket_number": [3],
+                "post_position": [5],
+                "carried_weight": [55.0],
+                "sex": ["牡"],
+                "horse_weight_change": [4.0],
+            }
+        )
+
+        extractor = HorseFeatureExtractor()
+        result = extractor.extract(df)
+
+        assert result["feat_win_odds"][0] == pytest.approx(5.5)
+        assert result["feat_win_favorite"][0] == 2
+        assert result["feat_bracket_number"][0] == 3
+        assert result["feat_post_position"][0] == 5
+        assert result["feat_carried_weight"][0] == pytest.approx(55.0)
+        assert result["feat_sex"][0] == 0  # 牡 -> 0
+        assert result["feat_horse_weight_change"][0] == pytest.approx(4.0)
+
+    def test_sex_encoding(self):
+        df = pl.DataFrame(
+            {
+                "horse_id": ["H001", "H002", "H003", "H004"],
+                "sex": ["牡", "牝", "騸", "unknown"],
+            }
+        )
+
+        extractor = HorseFeatureExtractor()
+        result = extractor.extract(df)
+
+        assert result["feat_sex"].to_list() == [0, 1, 2, -1]
+
+    def test_new_features_missing_columns(self):
+        df = pl.DataFrame({"horse_id": ["H001"]})
+
+        extractor = HorseFeatureExtractor()
+        result = extractor.extract(df)
+
+        assert result["feat_win_odds"][0] is None
+        assert result["feat_win_favorite"][0] is None
+        assert result["feat_bracket_number"][0] is None
+        assert result["feat_post_position"][0] is None
+        assert result["feat_carried_weight"][0] is None
+        assert result["feat_sex"][0] is None
+        assert result["feat_horse_weight_change"][0] is None
+
     def test_feature_names(self):
         extractor = HorseFeatureExtractor()
         names = extractor.feature_names
-        assert len(names) == 7
+        assert len(names) == 14
+        assert all(n.startswith("feat_") for n in names)
+
+
+# ---------------------------------------------------------------------------
+# RunningStyleFeatureExtractor tests
+# ---------------------------------------------------------------------------
+
+
+class TestRunningStyleFeatureExtractor:
+    """Tests for RunningStyleFeatureExtractor."""
+
+    def test_extract_from_pre_aggregated(self):
+        df = pl.DataFrame(
+            {
+                "horse_id": ["H001"],
+                "avg_corner_pos_4": [3.2],
+                "avg_last_3f_time": [35.5],
+            }
+        )
+
+        extractor = RunningStyleFeatureExtractor()
+        result = extractor.extract(df)
+
+        assert result["feat_avg_corner_pos_4"][0] == pytest.approx(3.2)
+        assert result["feat_avg_last_3f_time"][0] == pytest.approx(35.5)
+
+    def test_extract_with_missing_columns(self):
+        df = pl.DataFrame({"horse_id": ["H001"]})
+
+        extractor = RunningStyleFeatureExtractor()
+        result = extractor.extract(df)
+
+        assert result["feat_avg_corner_pos_4"][0] is None
+        assert result["feat_avg_last_3f_time"][0] is None
+
+    def test_feature_names(self):
+        extractor = RunningStyleFeatureExtractor()
+        names = extractor.feature_names
+        assert len(names) == 2
         assert all(n.startswith("feat_") for n in names)
 
 
@@ -390,10 +485,19 @@ class TestFeaturePipeline:
                 "horse_age": [4],
                 "weight": [480.0],
                 "num_past_races": [10],
+                "win_odds": [5.5],
+                "win_favorite": [2],
+                "bracket_number": [3],
+                "post_position": [5],
+                "carried_weight": [55.0],
+                "sex": ["牡"],
+                "horse_weight_change": [4.0],
                 "jockey_win_rate": [0.15],
                 "jockey_top3_rate": [0.35],
                 "jockey_course_win_rate": [0.20],
                 "jockey_experience": [500],
+                "avg_corner_pos_4": [3.2],
+                "avg_last_3f_time": [35.5],
             }
         )
 
@@ -402,13 +506,14 @@ class TestFeaturePipeline:
                 RaceFeatureExtractor(),
                 HorseFeatureExtractor(),
                 JockeyFeatureExtractor(),
+                RunningStyleFeatureExtractor(),
             ],
         )
         result = pipeline.fit_transform(df)
 
         # All feature names from all extractors
         all_features = pipeline.feature_names
-        assert len(all_features) == 6 + 7 + 4  # race + horse + jockey
+        assert len(all_features) == 6 + 14 + 4 + 2  # race + horse + jockey + running
         for feat in all_features:
             assert feat in result.columns
 
