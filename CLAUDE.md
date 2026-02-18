@@ -94,6 +94,7 @@ Switch environments via `ENVIRONMENT` env var (`dev` / `prod`).
 | Key | Default | Description |
 |-----|---------|-------------|
 | `model.feature_version` | `v2` | Feature version tag (logged to MLflow for experiment comparison) |
+| `feature_pipeline.extractors` | `["race", "horse", "jockey", "running_style"]` | エクストラクタ名リスト (`_EXTRACTOR_REGISTRY` キーと一致) |
 
 Feature version history:
 - **v1**: 13 features (race 6 + horse 7)

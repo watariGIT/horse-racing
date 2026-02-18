@@ -24,6 +24,13 @@ model:
   default_type: lgbm_classifier
   feature_version: v2
 
+feature_pipeline:
+  extractors:
+    - race
+    - horse
+    - jockey
+    - running_style
+
 backtest:
   train_window_days: 365
   test_window_days: 30
