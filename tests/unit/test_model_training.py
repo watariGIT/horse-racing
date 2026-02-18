@@ -441,6 +441,37 @@ class TestModelRegistry:
 
     @patch("src.model_training.model_registry.GCSClient")
     @patch("src.model_training.model_registry.get_settings")
+    def test_save_model_with_empty_metrics_and_metadata(
+        self, mock_settings, mock_gcs_cls
+    ):
+        """Regression: empty dict args must not raise ambiguous truth errors."""
+        mock_settings.return_value = MagicMock(
+            gcs=MagicMock(bucket_models="test-bucket")
+        )
+        mock_gcs = MagicMock()
+        mock_gcs_cls.return_value = mock_gcs
+
+        from src.model_training.model_registry import ModelRegistry
+
+        registry = ModelRegistry()
+
+        X, y = _make_classification_data(n_samples=50)
+        model = LGBMClassifierModel(params={"n_estimators": 10})
+        model.fit(X, y)
+
+        # Empty dicts and None should all work without errors
+        version = registry.save_model(
+            model, "test_model", metrics={}, extra_metadata={}
+        )
+        assert version is not None
+
+        version2 = registry.save_model(
+            model, "test_model", metrics=None, extra_metadata=None
+        )
+        assert version2 is not None
+
+    @patch("src.model_training.model_registry.GCSClient")
+    @patch("src.model_training.model_registry.get_settings")
     def test_list_versions(self, mock_settings, mock_gcs_cls):
         mock_settings.return_value = MagicMock(
             gcs=MagicMock(bucket_models="test-bucket")

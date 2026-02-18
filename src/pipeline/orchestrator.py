@@ -343,7 +343,7 @@ class PipelineOrchestrator:
                 model=self._model,
                 model_name=self._model_name,
                 metrics=self._train_metrics,
-                extra_metadata=extra_metadata if extra_metadata else None,
+                extra_metadata=extra_metadata,
             )
             saved["model_version"] = version
 
