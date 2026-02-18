@@ -82,8 +82,8 @@ class ModelRegistry:
                 "version": version,
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "params": model.params,
-                "metrics": metrics or {},
-                **(extra_metadata or {}),
+                "metrics": metrics if metrics is not None else {},
+                **(extra_metadata if extra_metadata is not None else {}),
             }
             metadata_blob = (
                 f"{_REGISTRY_PREFIX}/{model_name}/{version}/{_METADATA_FILE}"
