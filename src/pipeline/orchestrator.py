@@ -18,7 +18,11 @@ from src.common.logging import get_logger
 from src.evaluator.backtest_engine import BacktestEngine, BacktestResult
 from src.evaluator.reporter import Reporter
 from src.feature_engineering.extractors.horse_features import HorseFeatureExtractor
+from src.feature_engineering.extractors.jockey_features import JockeyFeatureExtractor
 from src.feature_engineering.extractors.race_features import RaceFeatureExtractor
+from src.feature_engineering.extractors.running_style_features import (
+    RunningStyleFeatureExtractor,
+)
 from src.feature_engineering.pipeline import FeaturePipeline
 from src.model_training.experiment_tracker import ExperimentTracker
 from src.model_training.models.lgbm_classifier import LGBMClassifierModel
@@ -152,9 +156,14 @@ class PipelineOrchestrator:
         preparer = DataPreparer(n_past_races=5)
         prepared_df = preparer.prepare_for_training(self._raw_df)
 
-        # Step 2: Feature extraction pipeline
+        # Step 2: Feature extraction pipeline (v2)
         pipeline = FeaturePipeline(
-            extractors=[RaceFeatureExtractor(), HorseFeatureExtractor()]
+            extractors=[
+                RaceFeatureExtractor(),
+                HorseFeatureExtractor(),
+                JockeyFeatureExtractor(),
+                RunningStyleFeatureExtractor(),
+            ]
         )
         self._feature_df = pipeline.fit_transform(prepared_df)
 

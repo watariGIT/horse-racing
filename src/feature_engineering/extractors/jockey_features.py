@@ -66,6 +66,7 @@ class JockeyFeatureExtractor(BaseFeatureExtractor):
             )
 
         # Course-specific win rate
+        # TODO(Phase 2): jockey_id × course のグループ集計を実装後に有効化
         if "jockey_course_win_rate" in df.columns:
             result = result.with_columns(
                 pl.col("jockey_course_win_rate")

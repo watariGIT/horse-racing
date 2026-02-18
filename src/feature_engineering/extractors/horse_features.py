@@ -1,7 +1,8 @@
 """Horse-level feature extractor.
 
 Extracts features from horse past performance data:
-average finish position, win rate, days since last race, age, weight.
+average finish position, win rate, days since last race, age, weight,
+market odds, gate position, and condition indicators.
 """
 
 from __future__ import annotations
@@ -11,6 +12,9 @@ from datetime import date
 import polars as pl
 
 from src.feature_engineering.extractors.base import BaseFeatureExtractor
+
+# Sex encoding: male/colt=0, female/filly=1, gelding=2
+_SEX_MAP = {"牡": 0, "牝": 1, "騸": 2}
 
 
 class HorseFeatureExtractor(BaseFeatureExtractor):
@@ -30,6 +34,13 @@ class HorseFeatureExtractor(BaseFeatureExtractor):
         "feat_horse_age",
         "feat_horse_weight",
         "feat_num_past_races",
+        "feat_win_odds",
+        "feat_win_favorite",
+        "feat_bracket_number",
+        "feat_post_position",
+        "feat_carried_weight",
+        "feat_sex",
+        "feat_horse_weight_change",
     ]
 
     def __init__(self, n_past_races: int = 5) -> None:
@@ -148,6 +159,79 @@ class HorseFeatureExtractor(BaseFeatureExtractor):
         else:
             result = result.with_columns(
                 pl.lit(None).cast(pl.Int64).alias("feat_num_past_races")
+            )
+
+        # Win odds (market evaluation)
+        if "win_odds" in df.columns:
+            result = result.with_columns(
+                pl.col("win_odds").cast(pl.Float64).alias("feat_win_odds")
+            )
+        else:
+            result = result.with_columns(
+                pl.lit(None).cast(pl.Float64).alias("feat_win_odds")
+            )
+
+        # Win favorite (popularity rank)
+        if "win_favorite" in df.columns:
+            result = result.with_columns(
+                pl.col("win_favorite").cast(pl.Int64).alias("feat_win_favorite")
+            )
+        else:
+            result = result.with_columns(
+                pl.lit(None).cast(pl.Int64).alias("feat_win_favorite")
+            )
+
+        # Bracket number (gate group)
+        if "bracket_number" in df.columns:
+            result = result.with_columns(
+                pl.col("bracket_number").cast(pl.Int64).alias("feat_bracket_number")
+            )
+        else:
+            result = result.with_columns(
+                pl.lit(None).cast(pl.Int64).alias("feat_bracket_number")
+            )
+
+        # Post position (gate number)
+        if "post_position" in df.columns:
+            result = result.with_columns(
+                pl.col("post_position").cast(pl.Int64).alias("feat_post_position")
+            )
+        else:
+            result = result.with_columns(
+                pl.lit(None).cast(pl.Int64).alias("feat_post_position")
+            )
+
+        # Carried weight (handicap)
+        if "carried_weight" in df.columns:
+            result = result.with_columns(
+                pl.col("carried_weight").cast(pl.Float64).alias("feat_carried_weight")
+            )
+        else:
+            result = result.with_columns(
+                pl.lit(None).cast(pl.Float64).alias("feat_carried_weight")
+            )
+
+        # Sex (ordinal encoded)
+        if "sex" in df.columns:
+            result = result.with_columns(
+                pl.col("sex")
+                .replace_strict(_SEX_MAP, default=-1)
+                .cast(pl.Int64)
+                .alias("feat_sex")
+            )
+        else:
+            result = result.with_columns(pl.lit(None).cast(pl.Int64).alias("feat_sex"))
+
+        # Horse weight change
+        if "horse_weight_change" in df.columns:
+            result = result.with_columns(
+                pl.col("horse_weight_change")
+                .cast(pl.Float64)
+                .alias("feat_horse_weight_change")
+            )
+        else:
+            result = result.with_columns(
+                pl.lit(None).cast(pl.Float64).alias("feat_horse_weight_change")
             )
 
         return result

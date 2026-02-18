@@ -58,8 +58,13 @@ class DataPreparer:
             n_past_races=self._n_past,
         )
 
+        # Rename age -> horse_age for HorseFeatureExtractor compatibility
+        if "age" in df.columns and "horse_age" not in df.columns:
+            df = df.rename({"age": "horse_age"})
+
         history_cols = self._compute_horse_history(df)
-        df = df.with_columns(history_cols)
+        jockey_cols = self._compute_jockey_history(df)
+        df = df.with_columns(history_cols + jockey_cols)
 
         # Add target columns
         df = df.with_columns(
@@ -89,7 +94,7 @@ class DataPreparer:
         # We use rolling_mean over a window of n on the shifted column.
         # Polars' over() with shift ensures we only look at past data.
 
-        return [
+        exprs = [
             # avg_finish: rolling mean of past n finish positions
             pl.col("finish_position")
             .shift(1)
@@ -120,4 +125,69 @@ class DataPreparer:
             .over("horse_id")
             .sub(1)
             .alias("num_past_races"),
+        ]
+
+        # Running style: historical avg of final corner position
+        if "corner_position_4" in df.columns:
+            exprs.append(
+                pl.col("corner_position_4")
+                .cast(pl.Float64)
+                .shift(1)
+                .rolling_mean(window_size=n, min_samples=1)
+                .over("horse_id")
+                .alias("avg_corner_pos_4")
+            )
+
+        # Closing speed: historical avg of last 3F time
+        if "last_3f_time" in df.columns:
+            exprs.append(
+                pl.col("last_3f_time")
+                .cast(pl.Float64)
+                .shift(1)
+                .rolling_mean(window_size=n, min_samples=1)
+                .over("horse_id")
+                .alias("avg_last_3f_time")
+            )
+
+        return exprs
+
+    def _compute_jockey_history(self, df: pl.DataFrame) -> list[pl.Expr]:
+        """Compute rolling jockey performance statistics.
+
+        Uses shift-based approach to prevent leakage, computing
+        win rate, top-3 rate, and experience per jockey.
+
+        Args:
+            df: Sorted DataFrame.
+
+        Returns:
+            List of Polars expressions for jockey history columns.
+        """
+        if "jockey_id" not in df.columns:
+            return [
+                pl.lit(None).cast(pl.Float64).alias("jockey_win_rate"),
+                pl.lit(None).cast(pl.Float64).alias("jockey_top3_rate"),
+                pl.lit(None).cast(pl.Int64).alias("jockey_experience"),
+            ]
+
+        n = self._n_past
+        return [
+            (pl.col("finish_position") == 1)
+            .cast(pl.Float64)
+            .shift(1)
+            .rolling_mean(window_size=n, min_samples=1)
+            .over("jockey_id")
+            .alias("jockey_win_rate"),
+            (pl.col("finish_position") <= 3)
+            .cast(pl.Float64)
+            .shift(1)
+            .rolling_mean(window_size=n, min_samples=1)
+            .over("jockey_id")
+            .alias("jockey_top3_rate"),
+            # jockey_experience: 初回出走=0 (当該レース含む累積 - 1)
+            pl.col("finish_position")
+            .cum_count()
+            .over("jockey_id")
+            .sub(1)
+            .alias("jockey_experience"),
         ]

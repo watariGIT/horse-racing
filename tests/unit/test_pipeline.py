@@ -44,6 +44,15 @@ def raw_race_df() -> pl.DataFrame:
                     "course": "東京",
                     "weight": 480.0 + idx * 5,
                     "age": 3 + idx,
+                    "win_odds": 5.5 + idx,
+                    "win_favorite": idx + 1,
+                    "bracket_number": (idx % 8) + 1,
+                    "post_position": idx + 1,
+                    "carried_weight": 55.0,
+                    "sex": "牡" if idx % 3 != 1 else "牝",
+                    "horse_weight_change": 2.0 * (idx - 2),
+                    "corner_position_4": ((day_offset // 7 + idx) % 6) + 1,
+                    "last_3f_time": 35.0 + idx * 0.2,
                 }
             )
     return pl.DataFrame(records)
@@ -80,9 +89,34 @@ class TestDataPreparer:
             "top3_rate",
             "days_since_last_race",
             "num_past_races",
+            "avg_corner_pos_4",
+            "avg_last_3f_time",
+            "jockey_win_rate",
+            "jockey_top3_rate",
+            "jockey_experience",
         ]
         for col in expected:
             assert col in result.columns, f"Missing column: {col}"
+
+    def test_age_renamed_to_horse_age(self, raw_race_df: pl.DataFrame) -> None:
+        """age column should be renamed to horse_age."""
+        preparer = DataPreparer(n_past_races=5)
+        result = preparer.prepare_for_training(raw_race_df)
+
+        assert "horse_age" in result.columns
+        assert "age" not in result.columns
+
+    def test_jockey_history_no_leakage(self, raw_race_df: pl.DataFrame) -> None:
+        """Jockey stats should not include current race data."""
+        preparer = DataPreparer(n_past_races=5)
+        result = preparer.prepare_for_training(raw_race_df)
+
+        # First appearance of each jockey should have 0 experience
+        first_races = result.sort("race_date").group_by("jockey_id").head(1)
+        for row in first_races.iter_rows(named=True):
+            assert (
+                row["jockey_experience"] == 0
+            ), f"Jockey {row['jockey_id']} should have 0 experience on first appearance"
 
     def test_target_columns_created(self, raw_race_df: pl.DataFrame) -> None:
         """is_win and actual_position targets should be added."""

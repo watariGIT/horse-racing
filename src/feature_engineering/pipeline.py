@@ -15,6 +15,9 @@ from src.feature_engineering.extractors.base import BaseFeatureExtractor
 from src.feature_engineering.extractors.horse_features import HorseFeatureExtractor
 from src.feature_engineering.extractors.jockey_features import JockeyFeatureExtractor
 from src.feature_engineering.extractors.race_features import RaceFeatureExtractor
+from src.feature_engineering.extractors.running_style_features import (
+    RunningStyleFeatureExtractor,
+)
 from src.feature_engineering.transformers.encoders import CategoryEncoder
 from src.feature_engineering.transformers.scalers import FeatureScaler
 
@@ -25,6 +28,7 @@ _EXTRACTOR_REGISTRY: dict[str, type[BaseFeatureExtractor]] = {
     "race": RaceFeatureExtractor,
     "horse": HorseFeatureExtractor,
     "jockey": JockeyFeatureExtractor,
+    "running_style": RunningStyleFeatureExtractor,
 }
 
 

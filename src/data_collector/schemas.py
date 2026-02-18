@@ -55,6 +55,8 @@ JOCKEY_RESULT_SCHEMA: dict[str, type[pl.DataType]] = {
 
 EXTENDED_HORSE_RESULT_SCHEMA: dict[str, type[pl.DataType]] = {
     **HORSE_RESULT_SCHEMA,
+    "bracket_number": pl.Int32,
+    "post_position": pl.Int32,
     "sex": pl.Utf8,
     "age": pl.Int32,
     "carried_weight": pl.Float64,
