@@ -26,13 +26,41 @@ description: Execute the dev environment ML pipeline on Cloud Run and post a bac
      --wait
    ```
 
-3. **Fetch report from GCS**
-   ```bash
-   gsutil cat gs://horse-racing-ml-dev-processed/reports/backtest_report.json
-   ```
-   JSON format: `{"report": "<markdown>"}`
+3. **Fetch metrics from MLflow**
 
-4. **Extract metrics**: Parse the `| Metric | Value |` table from the markdown report
+   Start MLflow proxy and retrieve the latest run's backtest metrics:
+
+   ```bash
+   gcloud run services proxy mlflow-ui-dev --region us-central1 --project horse-racing-ml-dev --port 5000 &
+   PROXY_PID=$!
+   sleep 3
+   ```
+
+   ```bash
+   uv run python -c "
+   import mlflow, json
+   mlflow.set_tracking_uri('http://localhost:5000')
+   runs = mlflow.search_runs(
+       experiment_names=['horse-racing-prediction'],
+       max_results=1,
+       order_by=['start_time DESC'],
+   )
+   if not runs.empty:
+       row = runs.iloc[0]
+       metrics = {}
+       for c in sorted(runs.columns):
+           if c.startswith('metrics.backtest_overall_'):
+               name = c.replace('metrics.backtest_overall_', '')
+               metrics[name] = round(row[c], 4)
+       print(json.dumps(metrics, indent=2))
+   "
+   ```
+
+   ```bash
+   kill $PROXY_PID 2>/dev/null
+   ```
+
+4. **Extract metrics**: Build the `| Metric | Value |` table from the MLflow metrics JSON
 
 5. **Post/update PR comment** using `gh api`:
    - Search for existing comment with HTML marker `<!-- preview-deploy-report -->`
