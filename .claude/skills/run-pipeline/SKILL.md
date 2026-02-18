@@ -73,6 +73,8 @@ description: Execute the prod environment ML pipeline Cloud Run Job and display 
    kill $PROXY_PID 2>/dev/null
    ```
 
+   **トラブルシューティング**: proxy 接続エラー時は `lsof -i :5000` でポート競合を確認し、別ポート (`--port 5001`) で再試行する。
+
 5. **Display metrics**: Build `| Metric | Value |` table from the MLflow metrics JSON and display formatted results
 
 ## Output Format

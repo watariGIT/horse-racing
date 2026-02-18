@@ -32,9 +32,10 @@ gcloud logging read \
 
 # Retrieve results via MLflow
 gcloud run services proxy mlflow-ui-dev --region us-central1 --project horse-racing-ml-dev --port 5000 &
+PROXY_PID=$!
 sleep 3
 uv run python -m src.model_training.compare_experiments --last 1
-kill %1 2>/dev/null
+kill $PROXY_PID 2>/dev/null
 ```
 
 ## Evaluation Metrics

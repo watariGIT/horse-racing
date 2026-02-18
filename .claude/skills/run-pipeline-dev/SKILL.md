@@ -60,6 +60,8 @@ description: Execute the dev environment ML pipeline on Cloud Run and post a bac
    kill $PROXY_PID 2>/dev/null
    ```
 
+   **トラブルシューティング**: proxy 接続エラー時は `lsof -i :5000` でポート競合を確認し、別ポート (`--port 5001`) で再試行する。
+
 4. **Extract metrics**: Build the `| Metric | Value |` table from the MLflow metrics JSON
 
 5. **Post/update PR comment** using `gh api`:

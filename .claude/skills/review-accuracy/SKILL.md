@@ -28,7 +28,7 @@ description: Review model accuracy results from MLflow and suggest improvements.
 
    Store the PR number, title, commit SHA, and MLflow UI base URL.
 
-2. **Fetch experiment data from MLflow (via GCS)**
+2. **Fetch experiment data from MLflow and GCS**
 
    Get the latest model version and its MLflow run ID:
 
@@ -62,7 +62,6 @@ description: Review model accuracy results from MLflow and suggest improvements.
    mlflow.set_tracking_uri('http://localhost:5000')
    runs = mlflow.search_runs(
        experiment_names=['horse-racing-prediction'],
-       filter_string=f'tags.mlflow.runName LIKE \"%\"',
        max_results=1,
        order_by=['start_time DESC'],
    )
@@ -88,6 +87,8 @@ description: Review model accuracy results from MLflow and suggest improvements.
    ```bash
    kill $PROXY_PID 2>/dev/null
    ```
+
+   **トラブルシューティング**: proxy 接続エラー時は `lsof -i :5000` でポート競合を確認し、別ポート (`--port 5001`) で再試行する。
 
    Extract from the output:
    - Overall metrics (JSON before `---PERIODS---`)
