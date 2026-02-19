@@ -71,3 +71,10 @@ HorseFeatureExtractor の期待 (`horse_age`) に合わせる適切な場所。
 
 BacktestEngine は各 walk-forward ステップで新規モデルを学習する設計。
 既存動作であり PR #50 の変更対象外。
+
+### `src/common/config.py` - `FeaturePipelineConfig` のデフォルト値と `base.yaml` の二重定義
+
+Pydantic モデルのデフォルト値は YAML 設定ファイルが読み込めない場合のフォールバックとして機能する。
+`base.yaml` が Source of Truth であり、Pydantic デフォルトはセーフティネット。
+`ModelConfig`、`BacktestConfig`、`BigQueryConfig` 等すべての設定クラスで同じパターンを使用しており、
+一貫性のある設計判断。
