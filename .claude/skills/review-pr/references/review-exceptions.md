@@ -16,11 +16,6 @@ GCS FUSE ボリュームマウントは `read_only = false` が必須。
 dev/prod は同一 GCP プロジェクト上で Terraform Workspace により分離する設計。
 `prod.tfvars` の `project_id` が `horse-racing-ml-dev` であるのは意図通り。
 
-### `.github/workflows/*.yaml` - `GCP_PROJECT_ID` のハードコード
-
-単一プロジェクト構成のため、ワークフロー内に `GCP_PROJECT_ID: horse-racing-ml-dev` を直接記載している。
-マルチプロジェクト構成への移行時に Secrets/vars への移行を検討する（Issue #48）。
-
 ---
 
 ## Python / MLflow
