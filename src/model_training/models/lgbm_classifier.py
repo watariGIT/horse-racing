@@ -1,7 +1,8 @@
 """LightGBM classifier for win prediction (binary classification).
 
 Wraps LightGBM's LGBMClassifier to predict whether a horse finishes
-first (1) or not (0).
+first (1) or not (0). Supports probability calibration and
+optimal threshold selection for imbalanced datasets.
 """
 
 from __future__ import annotations
@@ -11,6 +12,8 @@ from typing import Any
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.frozen import FrozenEstimator
 
 from src.model_training.models.base import BaseModel
 
@@ -46,6 +49,8 @@ class LGBMClassifierModel(BaseModel):
         merged = {**_DEFAULT_PARAMS, **(params or {})}
         super().__init__(merged)
         self._model: lgb.LGBMClassifier | None = None
+        self._calibrated_model: CalibratedClassifierCV | None = None
+        self._optimal_threshold: float = 0.5
 
     @property
     def model_type(self) -> str:
@@ -80,7 +85,7 @@ class LGBMClassifierModel(BaseModel):
         return self
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
-        """Predict binary class (win / not win).
+        """Predict binary class using optimal threshold.
 
         Args:
             X: Feature matrix.
@@ -89,11 +94,17 @@ class LGBMClassifierModel(BaseModel):
             Array of 0/1 predictions.
         """
         self._check_fitted()
-        assert self._model is not None
-        return self._model.predict(X)
+        proba = self.predict_proba(X)
+        if proba.ndim == 2:
+            proba_pos = proba[:, 1]
+        else:
+            proba_pos = proba
+        return (proba_pos >= self._optimal_threshold).astype(int)
 
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
         """Predict win probability.
+
+        Uses calibrated model if available, otherwise raw LightGBM output.
 
         Args:
             X: Feature matrix.
@@ -103,4 +114,40 @@ class LGBMClassifierModel(BaseModel):
         """
         self._check_fitted()
         assert self._model is not None
+        if self._calibrated_model is not None:
+            return self._calibrated_model.predict_proba(X)
         return self._model.predict_proba(X)
+
+    def calibrate(
+        self,
+        X: pd.DataFrame,
+        y: pd.Series,
+        method: str = "isotonic",
+    ) -> LGBMClassifierModel:
+        """Calibrate predicted probabilities using held-out data.
+
+        Args:
+            X: Validation feature matrix.
+            y: Validation binary target.
+            method: Calibration method (``"isotonic"`` or ``"sigmoid"``).
+
+        Returns:
+            Self for method chaining.
+        """
+        self._check_fitted()
+        assert self._model is not None
+        self._calibrated_model = CalibratedClassifierCV(
+            FrozenEstimator(self._model), method=method
+        )
+        self._calibrated_model.fit(X, y)
+        return self
+
+    @property
+    def optimal_threshold(self) -> float:
+        """Return the current optimal classification threshold."""
+        return self._optimal_threshold
+
+    @optimal_threshold.setter
+    def optimal_threshold(self, value: float) -> None:
+        """Set the optimal classification threshold."""
+        self._optimal_threshold = value

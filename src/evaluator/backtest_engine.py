@@ -15,6 +15,8 @@ import polars as pl
 
 from src.common.logging import get_logger
 from src.evaluator.metrics import MetricsResult, RacingMetrics
+from src.model_training.models.lgbm_classifier import LGBMClassifierModel
+from src.model_training.trainer import ModelTrainer
 
 logger = get_logger(__name__)
 
@@ -179,8 +181,21 @@ class BacktestEngine:
             y_train = train_df[self._target_col].to_pandas()
             model.fit(X_train, y_train)
 
-            # Predict
+            # Calibrate and find optimal threshold for classifiers
             X_test = test_df.select(feature_cols).to_pandas()
+            threshold = 0.5
+            if isinstance(model, LGBMClassifierModel):
+                # Use a portion of training data tail for calibration
+                cal_size = min(int(len(X_train) * 0.2), len(X_train))
+                X_cal = X_train.iloc[-cal_size:]
+                y_cal = y_train.iloc[-cal_size:]
+                model.calibrate(X_cal, y_cal)
+                threshold = ModelTrainer._find_optimal_threshold(
+                    y_cal, model.predict_proba(X_cal)
+                )
+                model.optimal_threshold = threshold
+
+            # Predict
             proba = model.predict_proba(X_test)
 
             # Handle shape: (n, 2) for classifiers or (n,) for rankers
@@ -201,7 +216,7 @@ class BacktestEngine:
                 + (["bet_amount", "payout", "odds"] if has_betting else [])
             ).with_columns(
                 pl.Series("predicted_prob", win_proba),
-                pl.Series("predicted_win", (win_proba >= 0.5).astype(int)),
+                pl.Series("predicted_win", (win_proba >= threshold).astype(int)),
                 pl.Series(
                     "actual_position",
                     (

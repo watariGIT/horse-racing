@@ -67,6 +67,8 @@ class BacktestConfig(BaseModel):
 class ModelConfig(BaseModel):
     default_type: str = "lgbm_classifier"
     feature_version: str = "v1"
+    calibration_method: str = "isotonic"
+    optimize_threshold: bool = True
 
 
 class FeaturePipelineConfig(BaseModel):

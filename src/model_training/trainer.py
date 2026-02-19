@@ -23,6 +23,7 @@ from sklearn.model_selection import TimeSeriesSplit
 from src.common.logging import get_logger
 from src.model_training.experiment_tracker import ExperimentTracker
 from src.model_training.models.base import BaseModel
+from src.model_training.models.lgbm_classifier import LGBMClassifierModel
 from src.model_training.models.lgbm_ranker import LGBMRankerModel
 
 logger = get_logger(__name__)
@@ -86,6 +87,14 @@ class ModelTrainer:
 
         # Train
         model.fit(X_train, y_train, **fit_kwargs)
+
+        # Calibrate and optimize threshold for classifiers
+        if isinstance(model, LGBMClassifierModel):
+            model.calibrate(X_val, y_val)
+            optimal_thresh = self._find_optimal_threshold(
+                y_val, model.predict_proba(X_val)
+            )
+            model.optimal_threshold = optimal_thresh
 
         # Evaluate
         metrics = self._evaluate(model, X_train, y_train, X_val, y_val)
@@ -212,6 +221,43 @@ class ModelTrainer:
 
         return train_idx, val_idx
 
+    @staticmethod
+    def _find_optimal_threshold(
+        y_true: pd.Series,
+        proba: np.ndarray,
+        low: float = 0.01,
+        high: float = 0.50,
+        step: float = 0.01,
+    ) -> float:
+        """Find the threshold that maximizes F1 score.
+
+        Args:
+            y_true: True binary labels.
+            proba: Predicted probabilities (shape (n,2) or (n,)).
+            low: Lower bound of threshold search range.
+            high: Upper bound of threshold search range.
+            step: Step size for threshold search.
+
+        Returns:
+            Optimal threshold value.
+        """
+        if proba.ndim == 2 and proba.shape[1] == 2:
+            proba_pos = proba[:, 1]
+        else:
+            proba_pos = proba
+
+        best_threshold = 0.5
+        best_f1 = 0.0
+
+        for threshold in np.arange(low, high, step):
+            preds = (proba_pos >= threshold).astype(int)
+            score = float(f1_score(y_true, preds, zero_division=0))
+            if score > best_f1:
+                best_f1 = score
+                best_threshold = float(threshold)
+
+        return best_threshold
+
     def _evaluate(
         self,
         model: BaseModel,
@@ -243,6 +289,10 @@ class ModelTrainer:
             metrics["val_pred_mean"] = float(np.mean(val_pred))
             metrics["val_pred_std"] = float(np.std(val_pred))
             return metrics
+
+        # Record optimal threshold if available
+        if isinstance(model, LGBMClassifierModel):
+            metrics["optimal_threshold"] = model.optimal_threshold
 
         # Classifier metrics
         for prefix, X_set, y_set in [

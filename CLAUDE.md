@@ -89,11 +89,18 @@ Config loading priority (later overrides earlier):
 
 Switch environments via `ENVIRONMENT` env var (`dev` / `prod`).
 
-### Feature Settings
+### Model Settings
 
 | Key | Default | Description |
 |-----|---------|-------------|
 | `model.feature_version` | `v2` | Feature version tag (logged to MLflow for experiment comparison) |
+| `model.calibration_method` | `isotonic` | 確率キャリブレーション手法 (`isotonic` or `sigmoid`) |
+| `model.optimize_threshold` | `true` | F1 最大化の閾値探索を有効化 |
+
+### Feature Settings
+
+| Key | Default | Description |
+|-----|---------|-------------|
 | `feature_pipeline.extractors` | `["race", "horse", "jockey", "running_style"]` | エクストラクタ名リスト (`_EXTRACTOR_REGISTRY` キーと一致) |
 
 Feature version history:

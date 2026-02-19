@@ -207,6 +207,8 @@ class PipelineOrchestrator:
                     "n_features": len(feature_cols),
                     "date_from": self._date_from or "",
                     "date_to": self._date_to or "",
+                    "calibration_method": self._settings.model.calibration_method,
+                    "optimize_threshold": self._settings.model.optimize_threshold,
                 }
             )
 

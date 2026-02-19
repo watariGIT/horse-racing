@@ -163,6 +163,45 @@ class TestLGBMClassifier:
         # Defaults should also be present
         assert "subsample" in model.params
 
+    def test_calibrate(self):
+        X, y = _make_classification_data()
+        model = LGBMClassifierModel(params={"n_estimators": 50})
+        model.fit(X, y)
+
+        # Calibrate on the same data (for test simplicity)
+        model.calibrate(X, y)
+
+        proba = model.predict_proba(X)
+        assert proba.shape == (len(X), 2)
+        np.testing.assert_allclose(proba.sum(axis=1), 1.0)
+
+    def test_optimal_threshold(self):
+        model = LGBMClassifierModel()
+        assert model.optimal_threshold == 0.5
+
+        model.optimal_threshold = 0.1
+        assert model.optimal_threshold == 0.1
+
+    def test_predict_uses_optimal_threshold(self):
+        X, y = _make_classification_data()
+        model = LGBMClassifierModel(params={"n_estimators": 50})
+        model.fit(X, y)
+
+        # With default threshold 0.5
+        preds_default = model.predict(X)
+
+        # With lower threshold, should predict more positives
+        model.optimal_threshold = 0.05
+        preds_low = model.predict(X)
+
+        assert preds_low.sum() >= preds_default.sum()
+
+    def test_calibrate_before_fit_raises(self):
+        model = LGBMClassifierModel()
+        X, y = _make_classification_data(n_samples=10)
+        with pytest.raises(RuntimeError):
+            model.calibrate(X, y)
+
 
 # ---------------------------------------------------------------------------
 # LGBMRankerModel tests
@@ -343,6 +382,30 @@ class TestModelTrainer:
         assert "mean_metrics" in result
         assert "std_metrics" in result
         assert len(result["fold_metrics"]) == 3
+
+    def test_train_calibrates_and_optimizes_threshold(self):
+        X, y = _make_classification_data()
+        model = LGBMClassifierModel(params={"n_estimators": 50})
+        trainer = ModelTrainer()
+
+        result = trainer.train(model, X, y)
+
+        # Model should have been calibrated
+        assert model._calibrated_model is not None
+        # Optimal threshold should be set (likely < 0.5 for imbalanced data)
+        assert "optimal_threshold" in result["metrics"]
+        assert 0.0 < model.optimal_threshold < 1.0
+
+    def test_find_optimal_threshold(self):
+        rng = np.random.RandomState(42)
+        y_true = pd.Series((rng.rand(1000) > 0.9).astype(int))
+        proba = rng.rand(1000)
+        # Make proba correlated with y_true
+        proba[y_true == 1] += 0.3
+        proba = np.clip(proba, 0, 1)
+
+        threshold = ModelTrainer._find_optimal_threshold(y_true, proba)
+        assert 0.01 <= threshold < 0.50
 
     def test_train_with_tracker(self):
         X, y = _make_classification_data()
