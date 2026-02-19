@@ -81,3 +81,16 @@ train メトリクス（F1, precision, recall）も同じ閾値で計算され�
 これは閾値最適化の本質的な動作であり、train/val 両方のメトリクスを
 同じ閾値で比較すること自体は妥当。train メトリクスの意味が変わるが、
 モデルの訓練データに対する性能を同一条件で評価するために意図的な設計。
+
+### `src/pipeline/orchestrator.py` - GitHub メタデータの `os.getenv()` 直接取得
+
+`github.pr_number` 等の GitHub メタデータは CI/CD 実行時のみ利用される一時的コンテキスト情報であり、
+設定ファイル（base.yaml 等）で管理する性質のものではない。
+Pydantic Settings に統合すると、ローカル開発時に不要なフィールドが増え、設定の複雑化を招く。
+`os.getenv()` での直接取得が適切。
+
+### `src/pipeline/orchestrator.py` - `train_model()` 内での GitHub タグ設定
+
+MLflow タグの設定は `start_run()` 直後に行うのが自然であり、既存タグ（`environment`,
+`model_type`, `feature_version` 等）も同じ `train_model()` 内で設定されている。
+CI/CD コンテキスト情報も MLflow Run のメタデータとして同一箇所で記録することで一貫性を保つ。

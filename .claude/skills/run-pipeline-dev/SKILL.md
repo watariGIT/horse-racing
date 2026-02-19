@@ -53,8 +53,9 @@ description: Execute the dev environment ML pipeline on Cloud Run and post a bac
                name = c.replace('metrics.backtest_overall_', '')
                metrics[name] = round(row[c], 4)
        result = {
-           'run_id': row['run_id'],
+           'run_id': row.get('run_id', ''),
            'run_name': row.get('tags.mlflow.runName', ''),
+           'experiment_id': row.get('experiment_id', ''),
            'metrics': metrics,
        }
        print(json.dumps(result, indent=2))
@@ -97,7 +98,7 @@ description: Execute the dev environment ML pipeline on Cloud Run and post a bac
 <summary>MLflow UI アクセス方法</summary>
 
 gcloud run services proxy mlflow-ui-dev --region us-central1 --project horse-racing-ml-dev --port 5000
-# Open: http://localhost:5000/#/experiments/1/runs/{run_id}
+# Open: http://localhost:5000/#/experiments/{experiment_id}/runs/{run_id}
 
 </details>
 

@@ -88,7 +88,8 @@ jobs:
           ENV_VARS="ENVIRONMENT=dev,GCP_PROJECT_ID=${{ env.GCP_PROJECT_ID }},PIPELINE_DATA_SOURCE=bigquery"
           ENV_VARS="${ENV_VARS},GITHUB_PR_NUMBER=${{ github.event.pull_request.number }}"
           ENV_VARS="${ENV_VARS},GITHUB_COMMIT_SHA=${{ github.event.pull_request.head.sha }}"
-          ENV_VARS="${ENV_VARS},GITHUB_BRANCH=${{ github.head_ref }}"
+          BRANCH_NAME=$(echo "${{ github.head_ref }}" | tr ',' '_')
+          ENV_VARS="${ENV_VARS},GITHUB_BRANCH=${BRANCH_NAME}"
           ENV_VARS="${ENV_VARS},GITHUB_REPOSITORY=${{ github.repository }}"
           if [ -n "${{ steps.mlflow.outputs.tracking_uri }}" ]; then
             ENV_VARS="${ENV_VARS},MLFLOW_TRACKING_URI=${{ steps.mlflow.outputs.tracking_uri }}"
