@@ -16,11 +16,6 @@ GCS FUSE ボリュームマウントは `read_only = false` が必須。
 dev/prod は同一 GCP プロジェクト上で Terraform Workspace により分離する設計。
 `prod.tfvars` の `project_id` が `horse-racing-ml-dev` であるのは意図通り。
 
-### `.github/workflows/*.yaml` - `GCP_PROJECT_ID` のハードコード
-
-単一プロジェクト構成のため、ワークフロー内に `GCP_PROJECT_ID: horse-racing-ml-dev` を直接記載している。
-マルチプロジェクト構成への移行時に Secrets/vars への移行を検討する（Issue #48）。
-
 ---
 
 ## Python / MLflow
@@ -71,3 +66,10 @@ HorseFeatureExtractor の期待 (`horse_age`) に合わせる適切な場所。
 
 BacktestEngine は各 walk-forward ステップで新規モデルを学習する設計。
 既存動作であり PR #50 の変更対象外。
+
+### `src/common/config.py` - `FeaturePipelineConfig` のデフォルト値と `base.yaml` の二重定義
+
+Pydantic モデルのデフォルト値は YAML 設定ファイルが読み込めない場合のフォールバックとして機能する。
+`base.yaml` が Source of Truth であり、Pydantic デフォルトはセーフティネット。
+`ModelConfig`、`BacktestConfig`、`BigQueryConfig` 等すべての設定クラスで同じパターンを使用しており、
+一貫性のある設計判断。
