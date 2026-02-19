@@ -182,7 +182,21 @@ description: Review model accuracy results from MLflow and suggest improvements.
    | P2 | インクリメンタル改善、既存データ活用の新特徴量 | 主要指標 +1-2% |
    | P3 | 実験的アイデア、効果不明 | PR コメントのみ記載 |
 
-   Create GitHub Issues for P0-P2 items only:
+   **重複チェック（Issue 作成前に必須）:**
+
+   P0-P2 の各提案について、Issue を作成する前に既存 Issue との重複を確認する:
+
+   ```bash
+   gh issue list --state open --label "model-improvement" --json number,title --jq '.[] | "\(.number)\t\(.title)"'
+   ```
+
+   各提案のタイトル・内容と既存 Issue を比較し:
+   - **重複あり**: Issue を作成せず、既存 Issue の番号を PR コメントの改善提案テーブルに記載する
+   - **重複なし**: 新規 Issue を作成する
+
+   判定基準: タイトルが完全一致でなくても、同じ改善目的・対象指標をカバーしている場合は重複とみなす。
+
+   Create GitHub Issues for P0-P2 items only (重複がないもの):
 
    ```bash
    gh issue create \
