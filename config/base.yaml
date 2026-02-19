@@ -23,6 +23,8 @@ kaggle:
 model:
   default_type: lgbm_classifier
   feature_version: v2
+  calibration_method: isotonic
+  optimize_threshold: true
 
 feature_pipeline:
   extractors:

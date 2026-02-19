@@ -23,6 +23,10 @@ from sklearn.model_selection import TimeSeriesSplit
 from src.common.logging import get_logger
 from src.model_training.experiment_tracker import ExperimentTracker
 from src.model_training.models.base import BaseModel
+from src.model_training.models.lgbm_classifier import (
+    LGBMClassifierModel,
+    find_optimal_threshold,
+)
 from src.model_training.models.lgbm_ranker import LGBMRankerModel
 
 logger = get_logger(__name__)
@@ -50,6 +54,8 @@ class ModelTrainer:
         race_dates: pd.Series | None = None,
         race_ids: pd.Series | None = None,
         validation_ratio: float = 0.2,
+        calibration_method: str = "isotonic",
+        optimize_threshold: bool = True,
         **fit_kwargs: Any,
     ) -> dict[str, Any]:
         """Train a model with temporal train/validation split.
@@ -66,6 +72,8 @@ class ModelTrainer:
                 If None, uses the last validation_ratio of rows.
             race_ids: Race ID series (required for ranker models).
             validation_ratio: Fraction of data used for validation.
+            calibration_method: Calibration method for classifiers.
+            optimize_threshold: Whether to optimize classification threshold.
             **fit_kwargs: Extra args passed to model.fit.
 
         Returns:
@@ -86,6 +94,19 @@ class ModelTrainer:
 
         # Train
         model.fit(X_train, y_train, **fit_kwargs)
+
+        # Calibrate and optimize threshold for classifiers
+        if isinstance(model, LGBMClassifierModel) and optimize_threshold:
+            cal_split = len(X_val) // 2
+            X_val_cal = X_val.iloc[:cal_split]
+            y_val_cal = y_val.iloc[:cal_split]
+            X_val_thresh = X_val.iloc[cal_split:]
+            y_val_thresh = y_val.iloc[cal_split:]
+            model.calibrate(X_val_cal, y_val_cal, method=calibration_method)
+            optimal_thresh = find_optimal_threshold(
+                y_val_thresh, model.predict_proba(X_val_thresh)
+            )
+            model.optimal_threshold = optimal_thresh
 
         # Evaluate
         metrics = self._evaluate(model, X_train, y_train, X_val, y_val)
@@ -243,6 +264,10 @@ class ModelTrainer:
             metrics["val_pred_mean"] = float(np.mean(val_pred))
             metrics["val_pred_std"] = float(np.std(val_pred))
             return metrics
+
+        # Record optimal threshold if available
+        if isinstance(model, LGBMClassifierModel):
+            metrics["optimal_threshold"] = model.optimal_threshold
 
         # Classifier metrics
         for prefix, X_set, y_set in [

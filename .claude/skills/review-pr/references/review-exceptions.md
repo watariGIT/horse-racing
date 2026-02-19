@@ -73,3 +73,11 @@ Pydantic モデルのデフォルト値は YAML 設定ファイルが読み込�
 `base.yaml` が Source of Truth であり、Pydantic デフォルトはセーフティネット。
 `ModelConfig`、`BacktestConfig`、`BigQueryConfig` 等すべての設定クラスで同じパターンを使用しており、
 一貫性のある設計判断。
+
+### `src/model_training/trainer.py` - train メトリクスが最適閾値で計算される
+
+閾値最適化後の `predict` は validation で最適化した閾値を使用するため、
+train メトリクス（F1, precision, recall）も同じ閾値で計算される。
+これは閾値最適化の本質的な動作であり、train/val 両方のメトリクスを
+同じ閾値で比較すること自体は妥当。train メトリクスの意味が変わるが、
+モデルの訓練データに対する性能を同一条件で評価するために意図的な設計。

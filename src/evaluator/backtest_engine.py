@@ -177,10 +177,30 @@ class BacktestEngine:
             # Train
             X_train = train_df.select(feature_cols).to_pandas()
             y_train = train_df[self._target_col].to_pandas()
-            model.fit(X_train, y_train)
+
+            # Calibrate and find optimal threshold for calibratable models
+            X_test = test_df.select(feature_cols).to_pandas()
+            threshold = 0.5
+            if hasattr(model, "calibrate") and hasattr(model, "optimal_threshold"):
+                # Hold out last 20% of train for calibration (not seen by model)
+                cal_split = int(len(X_train) * 0.8)
+                X_train_fit = X_train.iloc[:cal_split]
+                y_train_fit = y_train.iloc[:cal_split]
+                X_cal = X_train.iloc[cal_split:]
+                y_cal = y_train.iloc[cal_split:]
+                model.fit(X_train_fit, y_train_fit)
+                model.calibrate(X_cal, y_cal)
+
+                from src.model_training.models.lgbm_classifier import (
+                    find_optimal_threshold,
+                )
+
+                threshold = find_optimal_threshold(y_cal, model.predict_proba(X_cal))
+                model.optimal_threshold = threshold
+            else:
+                model.fit(X_train, y_train)
 
             # Predict
-            X_test = test_df.select(feature_cols).to_pandas()
             proba = model.predict_proba(X_test)
 
             # Handle shape: (n, 2) for classifiers or (n,) for rankers
@@ -201,7 +221,7 @@ class BacktestEngine:
                 + (["bet_amount", "payout", "odds"] if has_betting else [])
             ).with_columns(
                 pl.Series("predicted_prob", win_proba),
-                pl.Series("predicted_win", (win_proba >= 0.5).astype(int)),
+                pl.Series("predicted_win", (win_proba >= threshold).astype(int)),
                 pl.Series(
                     "actual_position",
                     (
