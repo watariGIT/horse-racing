@@ -41,6 +41,7 @@ Data Import -> Feature Engineering -> Training -> Prediction -> Evaluation
 - **Tracking URI**: HTTP via Cloud Run MLflow server (Cloud Run Job に `MLFLOW_TRACKING_URI` 環境変数で注入)
 - **Authentication**: `RequestHeaderProvider` プラグイン (`src/common/mlflow_auth.py`) が GCP OIDC ID トークンを自動付与
 - **Run naming**: `{model_type}_{YYYYMMDD_HHmmss}` with environment/model/feature tags
+- **GitHub traceability**: `github.pr_number`, `github.commit_sha`, `github.branch`, `github.repository` タグで MLflow Run ↔ GitHub PR の双方向追跡が可能（CI/CD ワークフローから環境変数経由で注入）
 - **Artifacts**: Feature importance (PNG/JSON), backtest results (JSON), evaluation metrics
 - **Model Registry linkage**: `mlflow_run_id` stored in GCS model metadata
 - **Storage**: Evaluation results stored exclusively in MLflow (no separate BigQuery table)

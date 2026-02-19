@@ -199,6 +199,10 @@ class PipelineOrchestrator:
                     "feature_version": self._settings.model.feature_version,
                     "date_from": self._date_from or "",
                     "date_to": self._date_to or "",
+                    "github.pr_number": os.getenv("GITHUB_PR_NUMBER", ""),
+                    "github.commit_sha": os.getenv("GITHUB_COMMIT_SHA", ""),
+                    "github.branch": os.getenv("GITHUB_BRANCH", ""),
+                    "github.repository": os.getenv("GITHUB_REPOSITORY", ""),
                 }
             )
             self._tracker.log_params(

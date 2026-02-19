@@ -52,7 +52,13 @@ description: Execute the dev environment ML pipeline on Cloud Run and post a bac
            if c.startswith('metrics.backtest_overall_'):
                name = c.replace('metrics.backtest_overall_', '')
                metrics[name] = round(row[c], 4)
-       print(json.dumps(metrics, indent=2))
+       result = {
+           'run_id': row.get('run_id', ''),
+           'run_name': row.get('tags.mlflow.runName', ''),
+           'experiment_id': row.get('experiment_id', ''),
+           'metrics': metrics,
+       }
+       print(json.dumps(result, indent=2))
    "
    ```
 
@@ -84,6 +90,17 @@ description: Execute the dev environment ML pipeline on Cloud Run and post a bac
 |--------|-------|
 | Win Accuracy | 0.0823 |
 | Auc Roc | 0.6012 |
+
+### MLflow Run
+**Run**: `{run_name}` (`{run_id}`)
+
+<details>
+<summary>MLflow UI アクセス方法</summary>
+
+gcloud run services proxy mlflow-ui-dev --region us-central1 --project horse-racing-ml-dev --port 5000
+# Open: http://localhost:5000/#/experiments/{experiment_id}/runs/{run_id}
+
+</details>
 
 <details>
 <summary>Full Backtest Report</summary>

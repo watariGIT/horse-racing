@@ -92,6 +92,9 @@ jobs:
         run: |
           IMAGE=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/ml-pipeline/ml-pipeline:${{ github.sha }}
           ENV_VARS="ENVIRONMENT=prod,GCP_PROJECT_ID=${{ env.GCP_PROJECT_ID }},PIPELINE_DATA_SOURCE=bigquery"
+          ENV_VARS="${ENV_VARS},GITHUB_COMMIT_SHA=${{ github.sha }}"
+          ENV_VARS="${ENV_VARS},GITHUB_BRANCH=${{ github.ref_name }}"
+          ENV_VARS="${ENV_VARS},GITHUB_REPOSITORY=${{ github.repository }}"
           if [ -n "${{ steps.mlflow.outputs.tracking_uri }}" ]; then
             ENV_VARS="${ENV_VARS},MLFLOW_TRACKING_URI=${{ steps.mlflow.outputs.tracking_uri }}"
           fi
