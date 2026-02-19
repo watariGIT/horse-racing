@@ -15,8 +15,6 @@ import polars as pl
 
 from src.common.logging import get_logger
 from src.evaluator.metrics import MetricsResult, RacingMetrics
-from src.model_training.models.lgbm_classifier import LGBMClassifierModel
-from src.model_training.trainer import ModelTrainer
 
 logger = get_logger(__name__)
 
@@ -179,21 +177,28 @@ class BacktestEngine:
             # Train
             X_train = train_df.select(feature_cols).to_pandas()
             y_train = train_df[self._target_col].to_pandas()
-            model.fit(X_train, y_train)
 
-            # Calibrate and find optimal threshold for classifiers
+            # Calibrate and find optimal threshold for calibratable models
             X_test = test_df.select(feature_cols).to_pandas()
             threshold = 0.5
-            if isinstance(model, LGBMClassifierModel):
-                # Use a portion of training data tail for calibration
-                cal_size = min(int(len(X_train) * 0.2), len(X_train))
-                X_cal = X_train.iloc[-cal_size:]
-                y_cal = y_train.iloc[-cal_size:]
+            if hasattr(model, "calibrate") and hasattr(model, "optimal_threshold"):
+                # Hold out last 20% of train for calibration (not seen by model)
+                cal_split = int(len(X_train) * 0.8)
+                X_train_fit = X_train.iloc[:cal_split]
+                y_train_fit = y_train.iloc[:cal_split]
+                X_cal = X_train.iloc[cal_split:]
+                y_cal = y_train.iloc[cal_split:]
+                model.fit(X_train_fit, y_train_fit)
                 model.calibrate(X_cal, y_cal)
-                threshold = ModelTrainer._find_optimal_threshold(
-                    y_cal, model.predict_proba(X_cal)
+
+                from src.model_training.models.lgbm_classifier import (
+                    find_optimal_threshold,
                 )
+
+                threshold = find_optimal_threshold(y_cal, model.predict_proba(X_cal))
                 model.optimal_threshold = threshold
+            else:
+                model.fit(X_train, y_train)
 
             # Predict
             proba = model.predict_proba(X_test)

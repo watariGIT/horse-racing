@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.frozen import FrozenEstimator
+from sklearn.metrics import f1_score
 
 from src.model_training.models.base import BaseModel
 
@@ -151,3 +152,40 @@ class LGBMClassifierModel(BaseModel):
     def optimal_threshold(self, value: float) -> None:
         """Set the optimal classification threshold."""
         self._optimal_threshold = value
+
+
+def find_optimal_threshold(
+    y_true: pd.Series,
+    proba: np.ndarray,
+    low: float = 0.01,
+    high: float = 0.50,
+    step: float = 0.01,
+) -> float:
+    """Find the threshold that maximizes F1 score.
+
+    Args:
+        y_true: True binary labels.
+        proba: Predicted probabilities (shape (n,2) or (n,)).
+        low: Lower bound of threshold search range.
+        high: Upper bound of threshold search range.
+        step: Step size for threshold search.
+
+    Returns:
+        Optimal threshold value.
+    """
+    if proba.ndim == 2 and proba.shape[1] == 2:
+        proba_pos = proba[:, 1]
+    else:
+        proba_pos = proba
+
+    best_threshold = low
+    best_f1 = 0.0
+
+    for threshold in np.arange(low, high, step):
+        preds = (proba_pos >= threshold).astype(int)
+        score = float(f1_score(y_true, preds, zero_division=0))
+        if score > best_f1:
+            best_f1 = score
+            best_threshold = float(threshold)
+
+    return best_threshold

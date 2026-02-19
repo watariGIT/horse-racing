@@ -23,7 +23,10 @@ from sklearn.model_selection import TimeSeriesSplit
 from src.common.logging import get_logger
 from src.model_training.experiment_tracker import ExperimentTracker
 from src.model_training.models.base import BaseModel
-from src.model_training.models.lgbm_classifier import LGBMClassifierModel
+from src.model_training.models.lgbm_classifier import (
+    LGBMClassifierModel,
+    find_optimal_threshold,
+)
 from src.model_training.models.lgbm_ranker import LGBMRankerModel
 
 logger = get_logger(__name__)
@@ -51,6 +54,8 @@ class ModelTrainer:
         race_dates: pd.Series | None = None,
         race_ids: pd.Series | None = None,
         validation_ratio: float = 0.2,
+        calibration_method: str = "isotonic",
+        optimize_threshold: bool = True,
         **fit_kwargs: Any,
     ) -> dict[str, Any]:
         """Train a model with temporal train/validation split.
@@ -67,6 +72,8 @@ class ModelTrainer:
                 If None, uses the last validation_ratio of rows.
             race_ids: Race ID series (required for ranker models).
             validation_ratio: Fraction of data used for validation.
+            calibration_method: Calibration method for classifiers.
+            optimize_threshold: Whether to optimize classification threshold.
             **fit_kwargs: Extra args passed to model.fit.
 
         Returns:
@@ -89,10 +96,15 @@ class ModelTrainer:
         model.fit(X_train, y_train, **fit_kwargs)
 
         # Calibrate and optimize threshold for classifiers
-        if isinstance(model, LGBMClassifierModel):
-            model.calibrate(X_val, y_val)
-            optimal_thresh = self._find_optimal_threshold(
-                y_val, model.predict_proba(X_val)
+        if isinstance(model, LGBMClassifierModel) and optimize_threshold:
+            cal_split = len(X_val) // 2
+            X_val_cal = X_val.iloc[:cal_split]
+            y_val_cal = y_val.iloc[:cal_split]
+            X_val_thresh = X_val.iloc[cal_split:]
+            y_val_thresh = y_val.iloc[cal_split:]
+            model.calibrate(X_val_cal, y_val_cal, method=calibration_method)
+            optimal_thresh = find_optimal_threshold(
+                y_val_thresh, model.predict_proba(X_val_thresh)
             )
             model.optimal_threshold = optimal_thresh
 
@@ -220,43 +232,6 @@ class ModelTrainer:
         val_idx = sorted_idx[split_point:]
 
         return train_idx, val_idx
-
-    @staticmethod
-    def _find_optimal_threshold(
-        y_true: pd.Series,
-        proba: np.ndarray,
-        low: float = 0.01,
-        high: float = 0.50,
-        step: float = 0.01,
-    ) -> float:
-        """Find the threshold that maximizes F1 score.
-
-        Args:
-            y_true: True binary labels.
-            proba: Predicted probabilities (shape (n,2) or (n,)).
-            low: Lower bound of threshold search range.
-            high: Upper bound of threshold search range.
-            step: Step size for threshold search.
-
-        Returns:
-            Optimal threshold value.
-        """
-        if proba.ndim == 2 and proba.shape[1] == 2:
-            proba_pos = proba[:, 1]
-        else:
-            proba_pos = proba
-
-        best_threshold = 0.5
-        best_f1 = 0.0
-
-        for threshold in np.arange(low, high, step):
-            preds = (proba_pos >= threshold).astype(int)
-            score = float(f1_score(y_true, preds, zero_division=0))
-            if score > best_f1:
-                best_f1 = score
-                best_threshold = float(threshold)
-
-        return best_threshold
 
     def _evaluate(
         self,

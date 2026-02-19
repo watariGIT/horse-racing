@@ -219,6 +219,8 @@ class PipelineOrchestrator:
             X=X,
             y=y,
             race_dates=race_dates,
+            calibration_method=self._settings.model.calibration_method,
+            optimize_threshold=self._settings.model.optimize_threshold,
         )
         self._train_metrics = train_result["metrics"]
 

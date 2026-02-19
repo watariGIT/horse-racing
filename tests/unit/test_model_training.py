@@ -18,7 +18,10 @@ from src.model_training.experiment_tracker import ExperimentTracker
 from src.model_training.models import MODEL_REGISTRY, create_model
 from src.model_training.models.base import BaseModel
 from src.model_training.models.ensemble import EnsembleModel
-from src.model_training.models.lgbm_classifier import LGBMClassifierModel
+from src.model_training.models.lgbm_classifier import (
+    LGBMClassifierModel,
+    find_optimal_threshold,
+)
 from src.model_training.models.lgbm_ranker import LGBMRankerModel
 from src.model_training.trainer import ModelTrainer
 
@@ -404,7 +407,7 @@ class TestModelTrainer:
         proba[y_true == 1] += 0.3
         proba = np.clip(proba, 0, 1)
 
-        threshold = ModelTrainer._find_optimal_threshold(y_true, proba)
+        threshold = find_optimal_threshold(y_true, proba)
         assert 0.01 <= threshold < 0.50
 
     def test_train_with_tracker(self):

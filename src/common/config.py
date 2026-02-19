@@ -10,7 +10,7 @@ import os
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, Field
@@ -67,7 +67,7 @@ class BacktestConfig(BaseModel):
 class ModelConfig(BaseModel):
     default_type: str = "lgbm_classifier"
     feature_version: str = "v1"
-    calibration_method: str = "isotonic"
+    calibration_method: Literal["isotonic", "sigmoid"] = "isotonic"
     optimize_threshold: bool = True
 
 
