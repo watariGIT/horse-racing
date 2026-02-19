@@ -529,6 +529,11 @@ class TestFeaturePipeline:
         pipeline = FeaturePipeline.from_config(config)
         assert len(pipeline._extractors) == 2
 
+    def test_pipeline_from_config_unknown_extractor_raises(self):
+        config = {"extractors": ["race", "unknown_extractor"]}
+        with pytest.raises(ValueError, match="Unknown extractor"):
+            FeaturePipeline.from_config(config)
+
     def test_pipeline_get_feature_columns(self):
         df = pl.DataFrame(
             {

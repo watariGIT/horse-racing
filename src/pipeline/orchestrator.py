@@ -17,12 +17,6 @@ from src.common.config import get_settings
 from src.common.logging import get_logger
 from src.evaluator.backtest_engine import BacktestEngine, BacktestResult
 from src.evaluator.reporter import Reporter
-from src.feature_engineering.extractors.horse_features import HorseFeatureExtractor
-from src.feature_engineering.extractors.jockey_features import JockeyFeatureExtractor
-from src.feature_engineering.extractors.race_features import RaceFeatureExtractor
-from src.feature_engineering.extractors.running_style_features import (
-    RunningStyleFeatureExtractor,
-)
 from src.feature_engineering.pipeline import FeaturePipeline
 from src.model_training.experiment_tracker import ExperimentTracker
 from src.model_training.models.lgbm_classifier import LGBMClassifierModel
@@ -157,13 +151,8 @@ class PipelineOrchestrator:
         prepared_df = preparer.prepare_for_training(self._raw_df)
 
         # Step 2: Feature extraction pipeline (v2)
-        pipeline = FeaturePipeline(
-            extractors=[
-                RaceFeatureExtractor(),
-                HorseFeatureExtractor(),
-                JockeyFeatureExtractor(),
-                RunningStyleFeatureExtractor(),
-            ]
+        pipeline = FeaturePipeline.from_config(
+            {"extractors": self._settings.feature_pipeline.extractors}
         )
         self._feature_df = pipeline.fit_transform(prepared_df)
 
