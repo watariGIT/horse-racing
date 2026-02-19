@@ -75,11 +75,17 @@ class FeaturePipeline:
         """
         extractor_names = config.get("extractors", [])
         extractors: list[BaseFeatureExtractor] = []
+        unknown_names: list[str] = []
         for name in extractor_names:
             if name in _EXTRACTOR_REGISTRY:
                 extractors.append(_EXTRACTOR_REGISTRY[name]())
             else:
-                logger.warning("Unknown extractor '%s', skipping", name)
+                unknown_names.append(name)
+        if unknown_names:
+            raise ValueError(
+                f"Unknown extractor(s): {unknown_names}. "
+                f"Available: {list(_EXTRACTOR_REGISTRY.keys())}"
+            )
 
         encoder = None
         encoder_cfg = config.get("encoder")

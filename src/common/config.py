@@ -70,7 +70,7 @@ class ModelConfig(BaseModel):
 
 
 class FeaturePipelineConfig(BaseModel):
-    extractors: list[str] = ["race", "horse", "jockey", "running_style"]
+    extractors: list[str] = Field(default=["race", "horse", "jockey", "running_style"])
 
 
 class LoggingConfig(BaseModel):
