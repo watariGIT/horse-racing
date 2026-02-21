@@ -60,7 +60,7 @@ description: Triage and address code review findings from review-pr. Use after /
    Post a comment on the PR summarizing all actions taken:
 
    ```bash
-   gh api repos/{owner}/{repo}/issues/{pr_number}/comments -f body="..."
+   gh pr comment {pr_number} --body "..."
    ```
 
    Format:
