@@ -85,7 +85,7 @@ description: Execute the dev environment ML pipeline on Cloud Run and post a bac
      gh pr comment {pr_number} --body "..."
      ```
 
-6. **On failure**: Post a "Status: Failed" comment even if the pipeline fails
+6. **On failure**: Post a "Status: Failed" comment even if the pipeline fails (同じ冪等パターンで `gh pr comment` を使用)
 
 ## PR Comment Format
 
