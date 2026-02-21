@@ -232,18 +232,18 @@ description: Review model accuracy results from MLflow and suggest improvements.
 
    Search for existing comment:
    ```bash
-   gh api repos/{owner}/{repo}/issues/{pr_number}/comments \
-     --jq '[.[] | select(.body | test("accuracy-review-report")) | .id] | first'
+   COMMENT_ID=$(gh api repos/{owner}/{repo}/issues/{pr_number}/comments \
+     --jq '[.[] | select(.body | test("accuracy-review-report")) | .id] | first // empty')
    ```
 
    If found: PATCH to update:
    ```bash
-   gh api repos/{owner}/{repo}/issues/comments/{comment_id} -X PATCH -f body="..."
+   gh api repos/{owner}/{repo}/issues/comments/$COMMENT_ID -X PATCH -f body="..."
    ```
 
-   If not found: POST to create:
+   If not found: create new with `gh pr comment`:
    ```bash
-   gh api repos/{owner}/{repo}/issues/{pr_number}/comments -f body="..."
+   gh pr comment {pr_number} --body "..."
    ```
 
 ## PR Comment Format

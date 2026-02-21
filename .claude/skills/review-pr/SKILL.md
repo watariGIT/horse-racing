@@ -108,18 +108,19 @@ description: Create a team of specialized reviewer agents (dynamically selected 
    - For domains that were NOT selected in step 2, display「対象外（変更ファイルに該当なし）」instead of findings
    - If CRITICAL count > 0, add warning message
 
-7. **Post/update PR comment** using `gh api`:
+7. **Post/update PR comment**:
    - Search for existing comment with marker `<!-- code-review-report -->`:
      ```bash
-     gh api repos/{owner}/{repo}/issues/{pr_number}/comments --jq '[.[] | select(.body | test("code-review-report")) | .id] | first'
+     COMMENT_ID=$(gh api repos/{owner}/{repo}/issues/{pr_number}/comments \
+       --jq '[.[] | select(.body | test("code-review-report")) | .id] | first // empty')
      ```
    - If found: PATCH to update
      ```bash
-     gh api repos/{owner}/{repo}/issues/comments/{comment_id} -X PATCH -f body="..."
+     gh api repos/{owner}/{repo}/issues/comments/$COMMENT_ID -X PATCH -f body="..."
      ```
-   - If not found: POST to create
+   - If not found: create new with `gh pr comment`
      ```bash
-     gh api repos/{owner}/{repo}/issues/{pr_number}/comments -f body="..."
+     gh pr comment {pr_number} --body "..."
      ```
 
 8. **Shutdown team**

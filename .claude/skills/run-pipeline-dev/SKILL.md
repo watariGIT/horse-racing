@@ -70,9 +70,20 @@ description: Execute the dev environment ML pipeline on Cloud Run and post a bac
 
 4. **Extract metrics**: Build the `| Metric | Value |` table from the MLflow metrics JSON
 
-5. **Post/update PR comment** using `gh api`:
-   - Search for existing comment with HTML marker `<!-- preview-deploy-report -->`
-   - PATCH to update if found, POST to create if not (prevents duplicates)
+5. **Post/update PR comment**:
+   - Search for existing comment with marker `<!-- preview-deploy-report -->`:
+     ```bash
+     COMMENT_ID=$(gh api repos/{owner}/{repo}/issues/{pr_number}/comments \
+       --jq '[.[] | select(.body | test("preview-deploy-report")) | .id] | first // empty')
+     ```
+   - If found: PATCH to update
+     ```bash
+     gh api repos/{owner}/{repo}/issues/comments/$COMMENT_ID -X PATCH -f body="..."
+     ```
+   - If not found: create new with `gh pr comment`
+     ```bash
+     gh pr comment {pr_number} --body "..."
+     ```
 
 6. **On failure**: Post a "Status: Failed" comment even if the pipeline fails
 
